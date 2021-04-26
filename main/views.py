@@ -79,57 +79,58 @@ class AddOrderView(APIView):
         order = Order(user=user, stock=stock, type=type, price=price, is_closed=False, amount=amount)
         order_ops = Order.objects.filter(stock=stock, type=not type, price=price, is_closed=False)
         for order_op in order_ops:
-            if order.amount != 0:
-                user_op = order_op.user
-                portfolio_op = Portfolio.objects.get(user=user_op, stock=stock)
+            if user != order_op.user:
+                if order.amount != 0:
+                    user_op = order_op.user
+                    portfolio_op = Portfolio.objects.get(user=user_op, stock=stock)
 
-                min_count = min(order.amount, order_op.amount) if type == 0 else -min(order.amount, order_op.amount)
+                    min_count = min(order.amount, order_op.amount) if type == 0 else -min(order.amount, order_op.amount)
 
-                order.amount -= abs(min_count)
-                order_op.amount -= abs(min_count)
+                    order.amount -= abs(min_count)
+                    order_op.amount -= abs(min_count)
 
-                portfolio.count += min_count
-                portfolio_op.count -= min_count
+                    portfolio.count += min_count
+                    portfolio_op.count -= min_count
 
-                user_op.balance += min_count * price
-                user.balance -= min_count * price
+                    user_op.balance += min_count * price
+                    user.balance -= min_count * price
 
-                if portfolio.count < 0:
-                    portfolio.short_balance -= min_count * price
-                    user.balance += min_count * price
-                    portfolio.is_debt = True
+                    if portfolio.count < 0:
+                        portfolio.short_balance -= min_count * price
+                        user.balance += min_count * price
+                        portfolio.is_debt = True
 
-                if portfolio_op.count < 0:
-                    portfolio_op.short_balance += min_count * price
-                    user_op.balance -= min_count * price
-                    portfolio_op.is_debt = True
+                    if portfolio_op.count < 0:
+                        portfolio_op.short_balance += min_count * price
+                        user_op.balance -= min_count * price
+                        portfolio_op.is_debt = True
 
-                if portfolio.count == 0 and portfolio.is_debt:
-                    user.balance += 100000 + portfolio.short_balance
-                    portfolio.short_balance = -100000
-                    portfolio.is_debt = False
+                    if portfolio.count == 0 and portfolio.is_debt:
+                        user.balance += 100000 + portfolio.short_balance
+                        portfolio.short_balance = -100000
+                        portfolio.is_debt = False
 
-                if portfolio_op.count == 0 and portfolio_op.is_debt:
-                    user.balance += 100000 + portfolio.short_balance
-                    portfolio_op.short_balance = -100000
-                    portfolio_op.is_debt = False
+                    if portfolio_op.count == 0 and portfolio_op.is_debt:
+                        user.balance += 100000 + portfolio.short_balance
+                        portfolio_op.short_balance = -100000
+                        portfolio_op.is_debt = False
 
-                if order_op.amount == 0:
-                    order_op.is_closed = True
-                    order_op.date_closed = timezone.now()
+                    if order_op.amount == 0:
+                        order_op.is_closed = True
+                        order_op.date_closed = timezone.now()
 
-                self.margin_call(user)
-                self.margin_call(user_op)
-                self.set_percentage(portfolio)
-                self.set_percentage(portfolio_op)
+                    self.margin_call(user)
+                    self.margin_call(user_op)
+                    self.set_percentage(portfolio)
+                    self.set_percentage(portfolio_op)
 
-                user_op.save()
-                order_op.save()
-                portfolio_op.save()
+                    user_op.save()
+                    order_op.save()
+                    portfolio_op.save()
 
-            if order.amount == 0:
-                order.is_closed = True
-                order.date_closed = timezone.now()
+                if order.amount == 0:
+                    order.is_closed = True
+                    order.date_closed = timezone.now()
 
         user.save()
         portfolio.save()
