@@ -392,29 +392,5 @@
         "description": "Twitter",
         "is_active": true
     }
-},
-{
-    "model": "main.portfolio",
-    "pk": 4,
-    "fields": {
-        "user": 3,
-        "stock": 1,
-        "count": 5,
-        "percentage": 100.0,
-        "short_balance": -100000.0,
-        "is_debt": false
-    }
-},
-{
-    "model": "main.portfolio",
-    "pk": 5,
-    "fields": {
-        "user": 1,
-        "stock": 1,
-        "count": 0,
-        "percentage": 0.0,
-        "short_balance": -100000.0,
-        "is_debt": false
-    }
 }
 ]

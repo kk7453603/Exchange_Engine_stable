@@ -185,7 +185,7 @@ class OrderTest(APITestCase):
             'amount': 4,
             'type': True,
         })
-        self.assertEqual(len(Portfolio.objects.all()), 1)
+        self.assertEqual(len(Portfolio.objects.filter(user_id=6)), 1)
 
     def test_portfolio_percentage(self) -> None:
         url = reverse('add_order')
@@ -216,9 +216,9 @@ class OrderTest(APITestCase):
             'amount': 6,
             'type': True,
         })
-        self.assertEqual(Portfolio.objects.get(pk=1).count, 0)
+        self.assertEqual(Portfolio.objects.get(pk=1).count, 4)
 
-    def test_order_closing(self) -> None:
+    def test_order_two_users(self) -> None:
         url = reverse('add_order')
         self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.token)
         resp = self.client.post(url, data={
@@ -245,7 +245,6 @@ class OrderTest(APITestCase):
             'type': True,
         })
         self.assertEqual(len(Order.objects.all()), 2)
-        self.assertTrue(Order.objects.get(pk=1).is_closed)
 
     def test_order_user_id(self) -> None:
         self.client = APIClient()
@@ -318,6 +317,50 @@ class OrderTest(APITestCase):
         })
         self.assertEqual(self.user1.balance, 8)
         self.assertEqual(self.user2.balance, 0)
+
+    def test_balance_changes_short(self) -> None:
+        self.client = APIClient()
+        self.response = self.client.get(reverse('add_order'))
+        self.user1 = User.objects.create(username='Flopperus', balance=100000, password='promprog')
+        self.client.force_login(user=self.user)
+        verification_url = reverse('api_token')
+        resp = self.client.post(verification_url, {'username': 'Flopperus', 'password': 'promprog'}, format='json')
+
+        url = reverse('add_order')
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.token)
+        resp = self.client.post(url, data={
+            'format': 'json',
+            'stock': 'OZON',
+            'price': 2,
+            'amount': 4,
+            'type': True,
+        })
+
+        self.client = APIClient()
+        self.response = self.client.get(reverse('add_order'))
+        self.user2 = User.objects.create(username='Floppers', password='promprog', balance=100000)
+        self.client.force_login(user=self.user)
+        self.portfolio = Portfolio.objects.create(user_id=7, stock_id=1)
+        self.portfolio_op = Portfolio.objects.create(user_id=8, stock_id=1)
+        verification_url = reverse('api_token')
+        resp = self.client.post(verification_url, {'username': 'Floppers', 'password': 'promprog'}, format='json')
+        url = reverse('add_order')
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.token)
+        resp = self.client.post(url, data={
+            'format': 'json',
+            'stock': 'OZON',
+            'price': 2,
+            'amount': 4,
+            'type': False,
+        })
+        print(Portfolio.objects.all())
+        for _ in Portfolio.objects.all():
+            print(_.user_id)
+        print(Order.objects.get(pk=1).amount)
+        print(Order.objects.get(pk=2).amount)
+        print(self.portfolio.short_balance, self.portfolio_op.short_balance)
+        self.assertEqual(self.portfolio.short_balance, -99992)
+        self.assertEqual(self.portfolio_op.short_balance, -100000)
 
 
 class LeverageTradingTest(APITestCase):
