@@ -78,9 +78,12 @@ class AddOrderView(APIView):
         self.set_percentage(portfolio)
         order = Order(user=user, stock=stock, type=type, price=price, is_closed=False, amount=amount)
         order_ops = Order.objects.filter(stock=stock, type=not type, price=price, is_closed=False)
+        print('qwertyuiopasdfghjklzxcvbnm')
         for order_op in order_ops:
             if user != order_op.user:
+                print('qwer')
                 if order.amount != 0:
+                    print('qwerty')
                     user_op = order_op.user
                     portfolio_op = Portfolio.objects.get(user=user_op, stock=stock)
 

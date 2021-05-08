@@ -321,11 +321,13 @@ class OrderTest(APITestCase):
     def test_balance_changes_short(self) -> None:
         self.client = APIClient()
         self.response = self.client.get(reverse('add_order'))
-        self.user1 = User.objects.create(username='Flopperus', balance=100000, password='promprog')
-        self.client.force_login(user=self.user)
+        self.user1 = User.objects.get(username='vasya')
+        self.user = User.objects.get(username='vasya')
+        self.client.force_login(user=self.user1)
         verification_url = reverse('api_token')
-        resp = self.client.post(verification_url, {'username': 'Flopperus', 'password': 'promprog'}, format='json')
-
+        resp = self.client.post(verification_url, {'username': 'vasya', 'password': 'promprog'}, format='json')
+        self.token = resp.data['access']
+        print(self.user.id)
         url = reverse('add_order')
         self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.token)
         resp = self.client.post(url, data={
@@ -338,12 +340,17 @@ class OrderTest(APITestCase):
 
         self.client = APIClient()
         self.response = self.client.get(reverse('add_order'))
-        self.user2 = User.objects.create(username='Floppers', password='promprog', balance=100000)
-        self.client.force_login(user=self.user)
-        self.portfolio = Portfolio.objects.create(user_id=7, stock_id=1)
-        self.portfolio_op = Portfolio.objects.create(user_id=8, stock_id=1)
+        self.user2 = User.objects.get(username='petya')
+        self.user = User.objects.get(username='petya')
+        self.client.force_login(user=self.user2)
         verification_url = reverse('api_token')
-        resp = self.client.post(verification_url, {'username': 'Floppers', 'password': 'promprog'}, format='json')
+        resp = self.client.post(verification_url, {'username': 'petya', 'password': 'promprog'}, format='json')
+        self.token = resp.data['access']
+
+        self.portfolio = Portfolio.objects.get(user=self.user1, stock_id=1)
+        self.portfolio_op = Portfolio.objects.get(user=self.user2, stock_id=1)
+
+
         url = reverse('add_order')
         self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.token)
         resp = self.client.post(url, data={
@@ -353,11 +360,8 @@ class OrderTest(APITestCase):
             'amount': 4,
             'type': False,
         })
-        print(Portfolio.objects.all())
-        for _ in Portfolio.objects.all():
-            print(_.user_id)
-        print(Order.objects.get(pk=1).amount)
-        print(Order.objects.get(pk=2).amount)
+
+        print(self.user.id)
         print(self.portfolio.short_balance, self.portfolio_op.short_balance)
         self.assertEqual(self.portfolio.short_balance, -99992)
         self.assertEqual(self.portfolio_op.short_balance, -100000)
