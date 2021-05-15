@@ -25,10 +25,10 @@ class Stocks(models.Model):
     :param is_active: Поле, означающее, активна ли акция
     """
 
-    index = models.CharField(max_length=255)
     name = models.CharField(max_length=255)
     description = models.TextField()
     is_active = models.BooleanField()
+    price = models.FloatField(default=0)
 
 
 class Order(models.Model):
@@ -121,3 +121,27 @@ class Candles(models.Model):
     date = models.DateTimeField(default=timezone.now)
     stock = models.ForeignKey(to=Stocks, on_delete=models.CASCADE)
     type = models.IntegerField(default=1)
+
+
+class Statistics(models.Model):
+    name = models.CharField(max_length=255, default='')
+    open_orders = models.IntegerField(default=0)
+    closed_orders = models.IntegerField(default=0)
+    user_active = models.IntegerField(default=0)
+    count_stocks = models.IntegerField(default=0)
+    count_long = models.IntegerField(default=0)
+    count_short = models.IntegerField(default=0)
+    max_balance = models.IntegerField(default=0)
+    the_richest = models.CharField(max_length=255, default='')
+
+
+class Settings(models.Model):
+    name = models.CharField(max_length=255, default='')
+    description = models.TextField(default='')
+    stock_id = models.IntegerField(default=0)
+    data = models.JSONField()
+
+
+class Cryptocurrencies(models.Model):
+    name = models.CharField(max_length=255, default='')
+    price = models.CharField(max_length=255, default='')

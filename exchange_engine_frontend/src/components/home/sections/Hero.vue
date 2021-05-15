@@ -16,25 +16,27 @@
           <BaseTitle
             weight="regular"
           >
-            МЫ ХОТИМ СДЕЛАТЬ ПОКУПКУ АКЦИИ ПРОСТОЙ И ВЫГОДНОЙ
+            МЫ ХОТИМ НАУЧИТЬ ПОКУПАТЬ АКЦИИ ПРОСТО И ЛЕГКО
           </BaseTitle>          
 
           <BaseHeading
             size="text-h5"
             weight="medium"
           >
-            ДОБРО ПОЖАЛОВАТЬ НА БИРЖУ EXCHANGE ENGINE
+            ДОБРО ПОЖАЛОВАТЬ НА БИРЖУ ШКОЛЫ ПРОГРАММИСТОВ
           </BaseHeading>
 
           <BaseBody>
-            Lorem ipsum dolor sit amet consectetur adipisicing elit. Repudiandae nobis neque aspernatur in quas iure id aliquid, esse debitis, quibusdam mollitia! Quia ea expedita magnam totam, earum omnis et perspiciatis?
+            Данный проект позволит вам научиться основам финансирования, 
+            наглядно и просто научит базовым приёмам, необходимым для умения 
+            грамотно приобретать акции, распоряжаться ими для своей выгоды.
           </BaseBody>
 
           <div
             class="align-center d-flex flex-wrap"
           >
             <BaseBtn
-              href="#features"
+              @click="$vuetify.goTo('#features', {duration: 300, offset: -10, easing: 'easeInOutCubic'})"
               x-large
             >
               Узнайте больше

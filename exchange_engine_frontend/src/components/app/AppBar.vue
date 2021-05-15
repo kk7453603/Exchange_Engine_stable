@@ -9,130 +9,152 @@
 	>
     <v-row>
       <v-col
-        class="hidden-sm-and-down"
+        class="d-flex align-center hidden-sm-and-down"
       >
         <BaseImg
-          :src="require('@/assets/logo.png')"
+          :src="require('@/assets/logo_shp_exchange_horizontal.png')"
           contain
-          max-width="46"
+          max-width="150"
           width="100%"
         />
       </v-col>
-      <v-col>
-        <v-tabs
-          centered
-          background-color="grey lighten-4"
+      <v-col
+        class="d-flex justify-center align-center"
+      >
+        <v-btn 
+          to="/app"
+          value="exchange"
+          class="mx-2"
+          exact
+          text
         >
-          <v-tab
-            to="/app"
+          <span>Биржа</span>
+
+          <v-icon
+            class="ml-1"
           >
-            Главная
-          </v-tab>
-          <v-tab
-            to="/app/profile"
+            mdi-finance
+          </v-icon>
+        </v-btn>
+        <v-btn 
+          to="/app/portfolio"
+          value="portfolio"
+          class="mx-2"
+          exact
+          text
+        >
+          <span>Портфель</span>
+
+          <v-icon
+            class="ml-1"
           >
-            Профиль
-          </v-tab>
-          <v-tab
-            to="/app/portfolio"
+            mdi-briefcase-account-outline
+          </v-icon>
+        </v-btn>
+        <v-btn 
+          to="/app/orders"
+          value="orders"
+          class="mx-2"
+          exact
+          text
+        >
+          <span>Заявки</span>
+
+          <v-icon
+            class="ml-1"
           >
-            Портфель
-          </v-tab>
-        </v-tabs>
+            mdi-order-bool-descending-variant
+          </v-icon>
+        </v-btn>
       </v-col>
       <v-col
-        class="d-flex justify-end "
+        class="d-flex justify-end align-center"
       >
-        <v-avatar
-          size="40px"
-          color="primary"
+        <v-menu
+          bottom
+          min-width="200px"
+          rounded
+          offset-y
         >
-          <v-img 
-            v-if="avatar"
-            :src="avatar"
-          />
-          <span 
-            v-else
-            class="white--text headline"
-          >
-            {{ getInitials }}
-          </span>
-        </v-avatar>
-
-        <div
-          class="text-center"
-        >
-          <strong>
-            {{ fullName }}
-          </strong>
-          <br>
-          <BaseBtn
-            to="/auth/logout"
-            class="pa-1"
-            color="red"
-            height="auto"
-            small 
-            text  
-          >
-            Выйти
-          </BaseBtn>
-        </div> 
+          <template v-slot:activator="{ on }">
+            <v-btn
+              icon
+              x-large
+              v-on="on"
+            >
+              <v-avatar
+                color="grey lighten-3"
+                size="48"
+              >
+                <v-img class="d-flex align-center" :src="profile.avatar">
+                  <template v-slot:placeholder>
+                    <span class="white--text headline">{{ getInitials }}</span>
+                  </template>
+                </v-img>
+                <!-- <span v-else class="white--text headline">{{ getInitials }}</span> -->
+              </v-avatar>
+            </v-btn>
+          </template>
+          <v-card>
+            <v-list-item-content class="justify-center">
+              <div class="mx-auto text-center">
+                <v-avatar
+                  color="grey lighten-3"
+                >
+                  <v-img v-if="profile.avatar" :src="profile.avatar"/>
+                  <span v-else class="white--text headline">{{ getInitials }}</span>
+                </v-avatar>
+                <h3>{{ fullName }}</h3>
+                <p class="caption mt-1">
+                  {{ profile.email }}
+                </p>
+                <v-divider class="my-3"></v-divider>
+                <v-btn
+                  to="/app/profile"
+                  depressed
+                  text
+                >
+                  Профиль
+                </v-btn>
+                <v-divider class="my-3"></v-divider>
+                <v-btn
+                  to="/auth/logout"
+                  depressed
+                  color="red"
+                  text
+                >
+                  Выйти
+                </v-btn>
+              </div>
+            </v-list-item-content>
+          </v-card>
+        </v-menu>
+        
       </v-col>
     </v-row>
   </v-app-bar>
 </template>
 
 <script>
-  import { getAPI } from '@/axios-api'
-  
 	export default {
 		name: 'HomeAppBar',
 
-    data: () => ({
-      surname: 'Ф',
-      name: 'А',
-      balance: 0,
-      avatar: '@/assets/andrey.jpg'
-    }),
-
-    methods: {
-      getProfile () {
-        getAPI.get('api/v1/profile/', {
-            headers: { 
-              Authorization: `Bearer ${this.$store.state.accessToken}` 
-            } 
-          })
-          .then(response => {
-            this.$store.state.APIData = response.data
-            let profile = response.data
-            this.surname = profile.first_name
-            this.name = profile.last_name
-            this.balance = profile.balance
-            this.avatar = 'http://127.0.0.1:8000' +profile.avatar
-          })
-          .catch(err => {
-            console.log(err)
-          })
-      },
-    },
-
     computed: {
+      profile() {
+        return this.$store.getters.profile
+      },
       fullName() {
-        return this.surname + ' ' + this.name
+        return this.profile.last_name + ' ' + this.profile.first_name
       },
       getInitials() {
-        let initials = this.surname[0] + this.name[0]
-        return initials
+        return this.profile.last_name[0] + this.profile.first_name[0]
       }
-    },
-
-    created () {
-      this.getProfile()
-      this.$store.subscribe((mutation) => {
-        if (mutation.type === 'changeProfile') {
-          this.getProfile()
-        }
-      })
     }
 	}
 </script>
+
+<style scoped>
+  .redbtn {
+    color: red;
+  }
+</style>
