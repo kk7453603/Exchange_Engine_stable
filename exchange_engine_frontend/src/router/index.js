@@ -69,6 +69,14 @@ const routes = [
         component: () => import('../views/app/children/Orders.vue')
       }
     ]
+  },
+  { 
+    path: '/404', 
+    name: '404', 
+    component: () => import('../components/404_error/Error404.vue'), 
+  }, { 
+    path: '*', 
+    redirect: '/404' 
   }
 ]
 
