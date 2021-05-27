@@ -86,7 +86,9 @@ class AddOrderView(APIView):
         type = data['type']
         price = float(data['price'])
         amount = int(data['amount'])
+        is_limit = False
         if price == 0:
+            is_limit = True
             price = stock.price
         setting = None
         if Settings.objects.filter(stock_id=-1, name='short_switch'):
@@ -99,7 +101,7 @@ class AddOrderView(APIView):
         portfolio, created = Portfolio.objects.get_or_create(user=user, stock=stock)
         self.set_percentage(portfolio)
         if (setting is None or setting.data['is_active']) or not setting.data['is_active'] and (type == '0' or portfolio.count > 0):
-            order = Order(user=user, stock=stock, type=type, price=price, is_closed=False, amount=amount, count=amount)
+            order = Order(user=user, stock=stock, type=type, price=price, is_closed=False, amount=amount, count=amount, is_limit=is_limit)
             order_ops = Order.objects.filter(stock=stock, type=not type, price=price, is_closed=False)
             for order_op in order_ops:
                 if order.amount != 0:

@@ -52,6 +52,7 @@ class Order(models.Model):
     count = models.IntegerField(default=1, null=True, blank=True)
     is_closed = models.BooleanField(default=False)
     date_closed = models.DateTimeField(default=None, null=True)
+    is_limit = models.BooleanField(default=False)
 
 
 class Portfolio(models.Model):
