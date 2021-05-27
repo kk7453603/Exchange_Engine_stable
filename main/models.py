@@ -90,6 +90,13 @@ class Quotes(models.Model):
     date = models.DateTimeField(default=timezone.now)
 
 
+class Pull(models.Model):
+    name = models.CharField(max_length=255, default='')
+    price = models.FloatField(default=0)
+    count = models.IntegerField(default=0)
+    type = models.BooleanField(default=False)
+
+
 class LeverageData(models.Model):
     """
     Модель торговли с плечом

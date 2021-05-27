@@ -23,7 +23,7 @@ from main.forms import CustomRegistrationForm, EmailValidationOnForgotPassword
 from django.contrib.auth import views as auth_views
 from django.views.generic import TemplateView
 
-from main.views import StocksListView, StockDetailView, StatisticsView, OrdersView, PortfolioUserView, ProfileDetailView, PricesView, registration_view, CandlesView, SettingsView, CryptocurrenciesView
+from main.views import StocksListView, StockDetailView, StatisticsView, OrdersView, PullView, PortfolioUserView, ProfileDetailView, PricesView, registration_view, CandlesView, SettingsView, CryptocurrenciesView
 
 from django.conf import settings
 from django.conf.urls.static import static
@@ -39,6 +39,7 @@ urlpatterns = [
     path('api/v1/stocks/<int:pk>/', StockDetailView.as_view(), name='stock'),
     path('api/v1/candles/<int:pk>/', CandlesView.as_view(), name='candles'),
     path('api/v1/statistics/', StatisticsView.as_view(), name='statistics'),
+    path('api/v1/pull/<int:pk>/', PullView.as_view(), name='pull'),
     path('api/v1/register/', registration_view, name='reg'),
     path('api/v1/orders/', OrdersView.as_view(), name='orders'),
     path('trading/leverage/', views.LeverageTradingView.as_view(), name='leverage_trading'),

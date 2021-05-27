@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 import requests
 from bs4 import BeautifulSoup
 
-from main.models import Stocks, Order, Portfolio, User, Quotes, LeverageData, Statistics, Candles, Settings, Cryptocurrencies
+from main.models import Stocks, Order, Portfolio, User, Quotes, LeverageData, Statistics, Candles, Settings, Cryptocurrencies, Pull
 from main import serializers
 
 from rest_framework.permissions import IsAuthenticated
@@ -191,6 +191,22 @@ class SettingsView(APIView):
     def get(self, request):
         settings = Settings.objects.all()
         serializer = serializers.SettingsSerializer(settings, many=True)
+        return Response(serializer.data)
+
+
+class PullView(APIView):
+
+    def get(self, request, pk):
+
+        stock = Stocks.objects.get(id=pk)
+
+        orders = Order.objects.filter(stock_id=pk, is_limit=False, is_closed=False)
+        for order in orders:
+            if not Pull.objects.filter(price=order.price, count=order.amount, name=stock.name, type=order.type):
+                pull = Pull.objects.create(price=order.price, count=order.amount, name=stock.name, type=order.type)
+                pull.save()
+        pull = Pull.objects.all()
+        serializer = serializers.PullSerializer(pull, many=True)
         return Response(serializer.data)
 
 
