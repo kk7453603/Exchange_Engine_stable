@@ -345,7 +345,6 @@ class OrderTest(APITestCase):
         verification_url = reverse('api_token')
         resp = self.client.post(verification_url, {'username': 'vasya', 'password': 'promprog'}, format='json')
         self.token = resp.data['access']
-        print(self.user.id)
         url = reverse('add_order')
         self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.token)
         resp = self.client.post(url, data={
@@ -378,9 +377,6 @@ class OrderTest(APITestCase):
             'amount': 4,
             'type': False,
         })
-
-        print(self.user.id)
-        print(self.portfolio.short_balance, self.portfolio_op.short_balance)
         self.assertEqual(self.portfolio.short_balance, -99992)
         self.assertEqual(self.portfolio_op.short_balance, -100000)
 
