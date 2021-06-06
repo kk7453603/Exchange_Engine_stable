@@ -4,7 +4,7 @@
       Заявки
     </h1>
     <v-list
-      v-if="orders.length"
+      v-if="orders.length != 0"
       two-line
       color="white"
     >
@@ -16,7 +16,7 @@
           Покупка
         </span>
       </v-subheader>
-
+      
       <v-list-item
         v-for="order in purchaseOrders"
         :key="order.id"
@@ -33,7 +33,7 @@
             v-else
             class="text-center mx-auto"
           >
-            {{ order.stock }}
+            {{ order.stock.name }}
           </span>
         </v-list-item-avatar>
 
@@ -41,12 +41,12 @@
           <v-list-item-title 
             v-if="order.type"
           >
-            Статус заявки на продажу {{ order.stock }}
+            Статус заявки на продажу {{ order.stock.name }}
           </v-list-item-title>
           <v-list-item-title 
             v-else
           >
-            Статус заявки на покупку {{ order.stock }}
+            Статус заявки на покупку {{ order.stock.name }}
           </v-list-item-title>
 
           <v-list-item-subtitle
@@ -67,12 +67,12 @@
           <v-list-item-title
             class="font-weight-medium"
           >
-            {{ order.amount }} X {{ order.price.toFixed(2) }}
+            {{ order.count }} X {{ order.price.toFixed(2) }}&#x20AE;
           </v-list-item-title>
           <v-list-item-subtitle
             
           >
-            {{ (order.amount * order.price).toFixed(2) }}
+            {{ (order.count * order.price).toFixed(2) }}&#x20AE;
           </v-list-item-subtitle>
         </v-list-item-action>
       </v-list-item>
@@ -111,7 +111,7 @@
             v-else
             class="text-center mx-auto"
           >
-            {{ order.stock }}
+            {{ order.stock.name }}
           </span>
         </v-list-item-avatar>
 
@@ -119,12 +119,12 @@
           <v-list-item-title 
             v-if="order.type"
           >
-            Статус заявки на продажу {{ order.stock }}
+            Статус заявки на продажу {{ order.stock.name }}
           </v-list-item-title>
           <v-list-item-title 
             v-else
           >
-            Статус заявки на покупку {{ order.stock }}
+            Статус заявки на покупку {{ order.stock.name }}
           </v-list-item-title>
 
           <v-list-item-subtitle
@@ -145,12 +145,12 @@
           <v-list-item-title
             class="font-weight-medium"
           >
-            {{ order.amount }} X {{ order.price.toFixed(2) }}
+            {{ order.count }} X {{ order.price.toFixed(2) }}&#x20AE;
           </v-list-item-title>
           <v-list-item-subtitle
             
           >
-            {{ (order.amount * order.price).toFixed(2) }}
+            {{ (order.count * order.price).toFixed(2) }}&#x20AE;
           </v-list-item-subtitle>
         </v-list-item-action>
       </v-list-item>
@@ -161,6 +161,12 @@
         У вас пока нет заявок на продажу
       </h5>
     </v-list>
+    <h3
+      v-else
+      class="ml-15"
+    >
+      У вас пока нет заявок
+    </h3>
   </v-container>
 </template>
 
@@ -171,7 +177,7 @@ export default {
   name: 'Orders',
 
   data: () => ({
-    orders: {},
+    orders: [],
     ordersInterval: undefined
   }),
 
@@ -179,11 +185,12 @@ export default {
       getOrders () {
         getAPI.get('api/v1/orders/', {
             headers: { 
-              Authorization: `Bearer ${this.$store.state.accessToken}` 
+              Authorization: `Bearer ${this.$store.getters.accessToken}` 
             } 
           })
           .then(response => {
             this.orders = response.data
+            console.log(this.orders)
           })
           .catch(err => {
             console.log(err)

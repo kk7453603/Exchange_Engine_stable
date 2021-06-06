@@ -9,59 +9,60 @@
         subheader
       >
         <v-list-item-group
-          v-model="selectedItem"
           color="primary"
         >
-          <template
+          <div
             v-for="(stock, index) in stocks"
-          >
-          <v-list-item
             :key="stock.id"
+            @click="selectStock(stock.id)"
           >
-            <v-list-item-avatar
-              size="25px"
-              class="justify-center"
-              color="primary"
-            >
-              <span
-                class="white--text"
+            <v-list-item>
+              <v-list-item-avatar
+                size="25px"
+                class="justify-center"
+                color="primary"
               >
-                {{ stock.name[0] + stock.name[1] }}
-              </span>
-            </v-list-item-avatar>
-  
-            <v-list-item-content>
-              <v-list-item-title v-text="stock.name">
-              </v-list-item-title>
-              <v-list-item-subtitle v-text="stock.description">
-              </v-list-item-subtitle>
-            </v-list-item-content>
+                <span
+                  class="white--text"
+                >
+                  {{ stock.name[0] + stock.name[1] }}
+                </span>
+              </v-list-item-avatar>
+    
+              <v-list-item-content>
+                <v-list-item-title v-text="stock.name">
+                </v-list-item-title>
+                <v-list-item-subtitle v-text="stock.description">
+                </v-list-item-subtitle>
+              </v-list-item-content>
 
-            <v-list-item-action>
-              <v-list-item-title v-text="stock.price.toFixed(4)"/>
-            </v-list-item-action>
-            <v-list-item-action>
-              
-              <v-icon 
-                v-if="stock.is_active"
-                color="green"
-              >
-                mdi-circle
-              </v-icon>
-              <v-icon
-                v-else
-                color="red"
-              >
-                mdi-circle
-              </v-icon>
-            </v-list-item-action>
-          </v-list-item>
+              <v-list-item-action>
+                <v-list-item-title>
+                {{ stock.price.toFixed(2) }}&#x20AE;
+                </v-list-item-title>
+              </v-list-item-action>
+              <v-list-item-action>
 
-          <v-divider
-            v-if="index < stocks.length - 1"
-            :key="'divider-' + index"
-          ></v-divider>
-          </template>
+                <v-icon
+                  v-if="stock.is_active"
+                  color="green"
+                >
+                  mdi-circle
+                </v-icon>
+                <v-icon
+                  v-else
+                  color="red"
+                >
+                  mdi-circle
+                </v-icon>
+              </v-list-item-action>
+            </v-list-item>
+
+            <v-divider
+              v-if="index < stocks.length - 1"
+              :key="'divider-' + index"
+            ></v-divider>
+          </div>
         </v-list-item-group>
       </v-list>
     </v-col>
@@ -70,17 +71,20 @@
 
     <v-col>
       <v-card
-        v-if="selectedItem != undefined" 
+        v-if="selectedStonkID != undefined" 
         class="pa-6"
         elevation="0"
         tile
       >
-        <v-card-title> {{stocks[selectedItem].name}} ({{stocks[selectedItem].price.toFixed(2) }})</v-card-title>
-        <v-card-text>{{stocks[selectedItem].description}}</v-card-text>
+        <v-card-title v-text="selectedStock.name"/>
+        <v-card-subtitle>
+          Текущая цена: {{ selectedStock.price.toFixed(2) }}&#x20AE;
+        </v-card-subtitle>
+        <v-card-text>{{ selectedStock.description }}</v-card-text>
         <v-container
           hidden
         >
-          <trading-vue 
+          <trading-vue
             hidden
             :data="this.$data"
             title-txt="NAME"
@@ -88,14 +92,14 @@
           />
         </v-container>
         <v-form>
-          <v-text-field v-model="amount" hint="" label="Количество" type="number"></v-text-field>
+          <v-text-field v-model="amount" hint="" label="Количество" type="number" ></v-text-field>
           <v-checkbox
           v-model="limit_order"
           hide-details
           label="Отложенная заявка"
           class="shrink mr-2 mt-0"
         ></v-checkbox>
-          <v-text-field v-if="limit_order" :disabled="!limit_order" v-model="price" hint="" label="Цена" type="number"></v-text-field>
+          <v-text-field v-if="limit_order" append-icon="mdi-currency-mnt" :disabled="!limit_order" v-model="price" hint="" label="Цена" type="number"></v-text-field>
           <v-checkbox
           hide-details
           label="Торговля с плечом"
@@ -138,37 +142,30 @@ import TradingVue from "trading-vue-js";
     name: 'App',
     components: { TradingVue },
     data: () => ({
-      selectedItem: undefined,
+      selectedStonkID: undefined,
       limit_order: false,
       leverage_trade: false,
       price: 0,
-      amount: 0,
+      amount: 1,
       stocks: [],
       ratio: 0,
-      // ohlcv: [
-      //   [1551128400000, 33, 37.1, 14, 14, 196],
-      //   [1551132000000, 13.7, 30, 6.6, 30, 206],
-      //   [1551135600000, 29.9, 33, 21.3, 21.8, 74],
-      //   [1551139200000, 21.7, 25.9, 18, 24, 140],
-      //   [1551142800000, 24.1, 24.1, 24, 24.1, 29],
-      // ],
       candles: [],
       ohlcv: [ [ 1620822279181, 2820, 3188.5, 3188.5, 2820 ], [ 1620822333716, 3090, 3085, 3090, 3085 ], [ 1620822395534, 3037.5, 3033, 3037.5, 3033 ]],
       item: '',
       stocksInterval: undefined
     }),
-    watch: {
-      'selectedItem': function(val){
-        if(val != undefined){
-          this.getCandles()
-        }
-      }
-    },
+    // watch: {
+    //   'selectedStonkID': function(val){
+    //     if(val != undefined){
+    //       this.getCandles()
+    //     }
+    //   }
+    // },
     methods: {
       getStocks(){
         getAPI.get('api/v1/stocks/', {
             headers: { 
-              Authorization: `Bearer ${this.$store.state.accessToken}` 
+              Authorization: `Bearer ${this.$store.getters.accessToken}` 
             } 
           })
           .then(response => {
@@ -180,8 +177,8 @@ import TradingVue from "trading-vue-js";
           })
       },
       getCandles(){
-        if (this.selectedItem){
-          getAPI.get('api/v1/candles/' + this.stocks[this.selectedItem].id + '/', )
+        if (this.selectedStonkID){
+          getAPI.get('api/v1/candles/' + this.selectedStock.id + '/', )
           .then(response => {
             this.candles = response.data
             this.ohclv = []
@@ -197,7 +194,7 @@ import TradingVue from "trading-vue-js";
       trade(type){
         var url_trade = this.leverage_trade && !this.leverage_trade ? 'trading/leverage/' : 'orders/add'
         getAPI.post(url_trade, {
-          stock: this.stocks[this.selectedItem].name.toString(),
+          stock: this.selectedStock.name.toString(),
           type: type,
           price: this.limit_order ? this.price : 0,
           amount: this.amount,
@@ -205,7 +202,7 @@ import TradingVue from "trading-vue-js";
         },
         {
           headers: { 
-            Authorization: `Bearer ${this.$store.state.accessToken}` 
+            Authorization: `Bearer ${this.$store.getters.accessToken}` 
           } 
         })
         .then(response => {
@@ -222,14 +219,31 @@ import TradingVue from "trading-vue-js";
               text: 'Введите корректные данные для торговли'
             })
         })
+      },
+      selectStock (id) {
+        this.selectedStonkID = id
       }
     },
-
+    computed: {
+      generateAlert () {
+        var str = 'Вы хотите создать '
+        str += this.limit_order ? 'отложенную заявку по цене ' + this.price : 'заявку по текущей цене '
+        str += this.leverage_trade ? 'с плечом  ' : ''
+        //str += получить количество акций, если 0 то к строке прибавить <в шорт> иначе <в лонг>
+        // сделать dialog component https://vuetifyjs.com/en/components/dialogs/#transitions
+        return str
+      },
+      selectedStock () {
+        return this.stocks.find(obj => {
+          return obj.id === this.selectedStonkID
+        })
+      }
+    },
     mounted () {
       this.getStocks()
       this.stocksInterval = setInterval(function() {
         this.getStocks()
-      }.bind(this), 30000)
+      }.bind(this), 10000)
     },
 
     destroyed () {
