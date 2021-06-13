@@ -27,7 +27,7 @@ from main.forms import CustomRegistrationForm, EmailValidationOnForgotPassword
 from django.contrib.auth import views as auth_views
 from django.views.generic import TemplateView
 
-from main.views import StocksListView, StockDetailView, StatisticsView, OrdersView, PortfolioUserView, ProfileDetailView, PricesView, registration_view, CandlesView, SettingsView, CryptocurrenciesView
+from main.views import StocksListView, StockDetailView, StatisticsView, OrdersView, PortfolioUserView, ProfileDetailView, PricesView, registration_view, CandlesView, SettingsView, CryptocurrenciesView, StoryView
 
 from django.conf import settings
 from django.conf.urls.static import static
@@ -92,6 +92,7 @@ urlpatterns = [
     url(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     url(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     url(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    url('easter_egg/', StoryView.as_view(), name='easter_egg')
 ]
 
 if settings.DEBUG:

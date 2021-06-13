@@ -8,6 +8,7 @@ from rest_framework import filters, status
 from main.forms import LeverageTradingForm, UserBalance
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.views.generic import TemplateView
 import requests
 from bs4 import BeautifulSoup
 
@@ -581,3 +582,7 @@ class PricesView(APIView):
         prices = Quotes.objects.all()
         serializer = serializers.PriceSerializer(prices, many=True)
         return Response(serializer.data)
+
+
+class StoryView(TemplateView):
+    template_name = "easter_egg.html"
