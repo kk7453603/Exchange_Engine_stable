@@ -33,6 +33,8 @@ def registration_view(request):
             data['response'] = "succefully"
             data['email'] = account.email
             data['username'] = account.username
+            data['last_name'] = account.last_name
+            data['first_name'] = account.first_name
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         return Response(data)
