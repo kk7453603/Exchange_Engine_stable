@@ -387,12 +387,23 @@ class CandlesView(APIView):
 
         Свечи генерируются с помощью специального бота.
         """
+
+        setting = None
+        if Settings.objects.filter(stock_id=-1, name='chart_switch'):
+            setting = Settings.objects.filter(stock_id=-1, name='chart_switch').last()
+        elif Settings.objects.filter(stock_id=pk, name='chart_switch'):
+            setting = Settings.objects.filter(stock_id=pk, name='chart_switch').last()
+
         if c_type > 0:
             candles = Candles.objects.filter(stock_id=pk, type=c_type)
         elif c_type == 0:
             candles = Candles.objects.filter(stock_id=pk)
         serializer = serializers.CandlesSerializer(candles, many=True)
-        return Response(serializer.data)
+        if (setting is None or setting.data['is_visible']) or not setting.data['is_visible']:
+            return Response(serializer.data)
+        else:
+            s = {}
+            return Response(s.data)
 
 
 class OrdersView(APIView):
