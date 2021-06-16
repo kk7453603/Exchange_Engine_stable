@@ -387,7 +387,6 @@ class CandlesView(APIView):
 
         Свечи генерируются с помощью специального бота.
         """
-
         setting = None
         if Settings.objects.filter(stock_id=-1, name='chart_switch'):
             setting = Settings.objects.filter(stock_id=-1, name='chart_switch').last()
