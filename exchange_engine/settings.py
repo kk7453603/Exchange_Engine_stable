@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'main',
     'django_filters',
+    'drf_yasg',
 ]
 
 MIDDLEWARE = [
@@ -186,3 +187,5 @@ EMAIL_HOST_PASSWORD = 'promprog'
 FIXTURE_DIRS = [
     'main/fixtures',
 ]
+
+DEFAULT_SHORT_BALANCE_VALUE = -100000
