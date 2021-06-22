@@ -216,7 +216,7 @@
               reset: true | '<img src="/static/icons/reset.png" width="20">',
               customIcons: []
             },
-          }
+          },
         },
         xaxis: {
           type: 'datetime'
@@ -256,7 +256,14 @@
       getCandles () {
         getAPI.get('http://127.0.0.1:8000/api/v1/candles/' + this.selectedStonkID + '/' + (this.selectedCandlesType + 1))
           .then(response => {
-            let data = response.data.map(function(candle) {
+            let data = response.data.filter(function(candle) {
+              let current_date = new Date()
+              current_date.setHours(current_date.getHours() - 5)
+              console.log(candle.date)
+              console.log(current_date)
+              console.log(Date.parse(candle.date) > Date.parse(current_date))
+              return Date.parse(candle.date) > Date.parse(current_date)
+            }).map(function(candle) {
               return [Date.parse(candle.date), [candle.open, candle.high, candle.low, candle.close].map((price) => (price.toFixed(2)))]
             })
 
