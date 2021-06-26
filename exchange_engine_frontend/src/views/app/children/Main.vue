@@ -259,9 +259,6 @@
             let data = response.data.filter(function(candle) {
               let current_date = new Date()
               current_date.setHours(current_date.getHours() - 5)
-              console.log(candle.date)
-              console.log(current_date)
-              console.log(Date.parse(candle.date) > Date.parse(current_date))
               return Date.parse(candle.date) > Date.parse(current_date)
             }).map(function(candle) {
               return [Date.parse(candle.date), [candle.open, candle.high, candle.low, candle.close].map((price) => (price.toFixed(2)))]
