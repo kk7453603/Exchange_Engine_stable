@@ -330,6 +330,7 @@
 
     destroyed () {
       clearInterval(this.stocksInterval)
+      clearInterval(this.candlesInterval)
     }
   }
 </script>
