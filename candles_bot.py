@@ -182,8 +182,6 @@ class CandleBot:
             for i in range(len(temporary)):
                 self.data[i // 5][i % 5] = temporary[i]
 
-        print(self.data)
-
     def process_stock(self, stock) -> None:
         """
         Обработка одного инструмента.
