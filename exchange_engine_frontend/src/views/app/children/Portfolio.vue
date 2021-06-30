@@ -2,10 +2,10 @@
   <v-row class="flex-column-reverse flex-md-row">
     <v-col cols="12" md="8">
       <v-list two-line class="transparent">
-        <v-list-item-group v-model="selectedItem" color="">
+        <v-list-item-group color="">
           <v-subheader inset class="text-h6"> Акции </v-subheader>
           <v-list-item v-for="(security) in portfolio" :key="security.stock.id"
-            @click="$router.push({ name: 'Stoks', params:{id:security.stock.id }})">
+            @click="$router.push({ name: 'Stocks', params:{id:security.stock.id }})">
             <v-list-item-avatar>
               <v-icon class="grey lighten-1" dark> </v-icon>
             </v-list-item-avatar>
@@ -110,34 +110,6 @@
 
     data: () => ({
       portfolioInterval: undefined,
-      value: 'recent',
-      alignments: ['start', 'center', 'end'],
-      files: [{
-          color: 'blue',
-          icon: 'mdi-clipboard-text',
-          subtitle: 'Jan 20, 2014',
-          title: 'Vacation itinerary'
-        },
-        {
-          color: 'amber',
-          icon: 'mdi-gesture-tap-button',
-          subtitle: 'Jan 10, 2014',
-          title: 'Kitchen remodel'
-        }
-      ],
-      folders: [{
-          subtitle: 'Jan 9, 2014',
-          title: 'Photos'
-        },
-        {
-          subtitle: 'Jan 17, 2014',
-          title: 'Recipes'
-        },
-        {
-          subtitle: 'Jan 28, 2014',
-          title: 'Work'
-        }
-      ],
     })
   }
 

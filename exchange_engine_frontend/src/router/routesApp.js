@@ -20,8 +20,8 @@ export default [{
       component: () => import('../views/app/children/Portfolio.vue')
     },
     {
-        path: 'stoks/:id',
-        name: 'Stoks',
+        path: 'stocks/:id',
+        name: 'Stocks',
         component: () => import('../views/app/Stoks.vue')
     },
     {

@@ -47,7 +47,7 @@ export default {
       this.getUserInfo()
       this.userInfoInterval = setInterval(function() {
         this.getUserInfo()
-      }.bind(this), 1000)
+      }.bind(this), 60*100)
     },
     destroyed() {
       clearInterval(this.userInfoInterval)

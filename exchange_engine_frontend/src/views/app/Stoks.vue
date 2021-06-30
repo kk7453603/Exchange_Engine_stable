@@ -51,41 +51,25 @@
             <apexchart height="450" type="candlestick" :options="options" :series="series"></apexchart>
         </v-col>
         <v-col cols="12">
-            <h1>В портфеле</h1>
-            <v-row class="align-center">
-                <v-col cols="12" sm="6">
-                    <v-carousel :continuous="false" :cycle="cycle" hide-delimiters height="auto" v-model="model">
-                        <v-carousel-item>
-                            <v-card outlined elevation="0" class="pa-2 mt-8 mb-8">
-                                <v-card-text class="pb-0">
-                                    <v-row class="flex-sm-row">
-                                        <v-col class="text-center">
-                                            <p class="text-h5">10 акций</p>
-                                            <p class="text-subtitle-1 text-no-wrap">33 810,63₮ → 40 810,63₮ </p>
-                                        </v-col>
-                                    </v-row>
-                                </v-card-text>
-                            </v-card>
-                        </v-carousel-item>
-                        <v-carousel-item>
-                            <v-card outlined elevation="0" class="pa-2 mt-8 mb-8">
-                                <v-card-text class="pb-0">
-                                    <v-row class="flex-sm-row">
-                                        <v-col class="text-center">
-                                            <p class="text-h5">10 акций</p>
-                                            <p class="text-subtitle-1 text-no-wrap">33 810,63₮ → 40 810,63₮ </p>
-                                        </v-col>
-                                    </v-row>
-                                </v-card-text>
-                            </v-card>
-                        </v-carousel-item>
-                    </v-carousel>
+            <h1 v-if="stoks_portfolio!=undefined">В портфеле</h1>
+            <v-row class="align-center justify-end">
+                <v-col v-if="stoks_portfolio!=undefined" cols="12" sm="6">
+                    <v-card outlined elevation="0" class="pa-2 mt-8 mb-8">
+                        <v-card-text class="pb-0">
+                            <v-row class="flex-sm-row">
+                                <v-col class="text-center">
+                                    <p class="text-h5">10 акций</p>
+                                    <p class="text-subtitle-1 text-no-wrap">33 810,63₮ → 40 810,63₮ </p>
+                                </v-col>
+                            </v-row>
+                        </v-card-text>
+                    </v-card>
                 </v-col>
-                <v-col cols="6" sm="3">
-                    <sellStok />
+                <v-col v-if="stoks_portfolio!=undefined" cols="6" sm="3">
+                    <sellStock />
                 </v-col>
-                <v-col cols="6" sm="3">
-                    <bySroks />
+                <v-col v-bind:cols="[stoks_portfolio!=undefined ? 6 : 12]" sm="3">
+                    <buyStock :stock="stock"/>
                 </v-col>
             </v-row>
         </v-col>
@@ -100,14 +84,16 @@
 
     export default {
         components: {
-            sellStok: () => import('@/components/app/saleStoks.vue'),
-            bySroks: () => import('@/components/app/byStoks.vue'),
+            sellStock: () => import('@/components/app/stocks/sell.vue'),
+            buyStock: () => import('@/components/app/stocks/buy.vue'),
         },
         computed: {
-            stoks() {
-                console.log(this.$store.getters.portfolio.find(item => item.id == this.$route.params.id))
-                let res = this.$store.getters.portfolio
-                return res.find(item => item.id == this.$route.params.id);
+            stocks_portfolio(){
+                let p = this.$store.getters.portfolio
+                if ((p.length == 0)){
+                    return undefined
+                }
+                return p.find(item => item.id == this.$route.params.id);
             }
         },
         methods: {
@@ -146,40 +132,7 @@
                     .catch(err => {
                         console.log(err)
                     })
-            },
-            trade(type) {
-                var url_trade = this.leverage_trade && !this.leverage_trade ? 'trading/leverage/' : 'orders/add'
-                getAPI.post(url_trade, {
-                        stock: this.selectedStock.name.toString(),
-                        type: type,
-                        price: this.limit_order ? this.price : 0,
-                        amount: this.amount,
-                        ratio: this.ratio,
-                    }, {
-                        headers: {
-                            Authorization: `Bearer ${this.$store.getters.accessToken}`
-                        }
-                    })
-                    .then(response => {
-                        console.log(response)
-                        this.$store.commit({
-                            type: 'showSnackbar',
-                            text: 'Вы создали заявку'
-                        })
-                    })
-                    .catch(err => {
-                        console.log(err)
-                        this.$store.commit({
-                            type: 'showSnackbar',
-                            text: 'Введите корректные данные для торговли'
-                        })
-                    })
-            },
-            selectStock(id) {
-                this.selectedStonkID = id
-                this.getCandles()
             }
-
         },
         watch: {
             selectedCandlesType: function () {
