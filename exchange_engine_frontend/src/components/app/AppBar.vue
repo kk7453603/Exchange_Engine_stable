@@ -1,11 +1,11 @@
 <template>
   <v-app-bar
     id="home-app-bar"
-    color="grey lighten-4"
+    style="border-bottom: solid rgba(0, 0, 0, 0.12) 1px;z-index: 13;position: absolute;"
 		app
-		elevation="1"
-    style="z-index: 13"
-		elevate-on-scroll
+    dense 
+    absolut
+    flat
 		height="80"
 	>
     <v-row>

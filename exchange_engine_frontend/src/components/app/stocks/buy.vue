@@ -52,19 +52,17 @@
                     <v-col cols="12">
                         <v-select v-model="select" :items="items" label="Тип заявки" outlined></v-select>
                         <v-form v-if="select == 0">
-                            <v-text-field min='0' readonly :value="stock.price.toFixed(2)" append-icon="₮" outlined label="Цена">
-                            </v-text-field>
                             <v-text-field type="number" min='1' value="1" outlined label="Колическво">
                             </v-text-field>
                         </v-form>
                         <v-form v-if="select == 1">
-                            <v-text-field min='0' :value="stock.price.toFixed(2)" append-icon="₮" outlined label="Размер плеча">
+                            <v-text-field min='0' :value="stock.price.toFixed(2)" append-icon="₮" outlined label="Цена">
                             </v-text-field>
                             <v-text-field type="number" min='1' value="1" outlined label="Колическво">
                             </v-text-field>
                         </v-form>
                         <v-form v-if="select == 2">
-                            <v-text-field min='0' :value="stock.price.toFixed(2)" append-icon="₮" outlined label="Цена">
+                            <v-text-field min='0' append-icon="₮" outlined label="Размер плеча">
                             </v-text-field>
                             <v-text-field type="number" min='1' value="1" outlined label="Колическво">
                             </v-text-field>

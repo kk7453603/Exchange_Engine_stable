@@ -1,6 +1,6 @@
 <template>
   <v-row>
-    <v-col cols="1" v-for="(stock) in stocks" :key="stock.id">
+    <v-col cols="6" md="4" lg="1" v-for="(stock) in stocks" :key="stock.id">
       <v-card v-bind:disabled="!stock.is_active" elevation="0" outlined @click="$router.push({ name: 'Stocks', params:{id:stock.id }})">
         <v-row no-gutters class="text-center">
           <v-col cols="12">

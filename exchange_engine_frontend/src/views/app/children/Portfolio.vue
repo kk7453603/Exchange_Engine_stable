@@ -65,7 +65,7 @@
                     mdi-clipboard-text
                   </v-icon>
                 </v-btn>
-                <p class="caption mt-1">Операции</p>
+                <p class="caption mt-1">Заявки</p>
               </div>
             </v-col>
           </v-row>
