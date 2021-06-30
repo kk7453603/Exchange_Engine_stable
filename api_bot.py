@@ -1,10 +1,5 @@
-import os
-import django
 import getpass
 import requests
-
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'exchange_engine.settings')
-django.setup()
 
 
 def login(host):
@@ -16,7 +11,7 @@ def login(host):
     # данные пользователя
     data = {
         'username': input('Enter your username: ').strip(),
-        'password': getpass.getpass('Enter your password: ')
+        'password': getpass.getpass('Enter your password: ').strip()
     }
 
     # получаем токены данного пользователя
@@ -44,7 +39,7 @@ def create_order(host, headers):
 
 def list_orders(host, headers):
     """
-    Список всех ордеров
+    Список всех ордеров пользователя
     """
     # смотрим список всех ордеров, убеждаясь, что ордер создан
     orders_list_url = f'{host}/api/v1/orders/'
@@ -69,9 +64,34 @@ def list_candles(host, headers):
 
 
 def list_stocks(host):
+    """
+    Список всех акций
+    """
     orders_list_url = f'{host}/api/v1/stocks/'
     response = requests.get(orders_list_url)
     return response.json()
+
+
+def readable_orders_print(orders, style):
+    """
+    Удобная отрисовка списка ордеров пользователя
+
+    `table` - если вы хотите вывести ордера в виде таблицы, `default` - если вы хотите их вывести в стандартном формате.
+    """
+    if style == 'table':
+        print('---ID----NAME----COUNT---PRICE--------TYPE--------STATE----USER_ID----DESCRIPTION')
+        for order in orders:
+            print(f"   {order['stock']['id']}     {order['stock']['name']}      {order['count']}     "
+                  f"{format(order['price'], '.2f') if (10000 > int(order['price']) >= 1000)  else format(order['price'], '.3f') if int(order['price']) < 1000 else format(order['price'], '.1f') if int(order['price']) >= 10000 else format(order['price'], '.0f')}      "
+                  f"{'buying'.ljust(7) if not order['type'] else 'selling'}     "
+                  f"{'closed' if order['is_closed'] else 'open'}     {order['user']}       {order['stock']['description']}")
+        print('---ID----NAME----COUNT---PRICE--------TYPE--------STATE----USER_ID----DESCRIPTION')
+    elif style == 'default':
+        for order in orders:
+            print(f"Stock ID: {order['stock']['id']}, stock name: {order['stock']['name']}, stock description: "
+                  f"{order['stock']['description']}. Order price: {order['price']}, order amount: {order['count']}, "
+                  f"order type: {'buy' if not order['type'] else 'sell'}, "
+                  f"order state: {'closed' if order['is_closed'] else 'open'}. User ID: {order['user']}.")
 
 
 def main():
@@ -87,7 +107,7 @@ def main():
 
     # просмотр списка ордеров
     orders = list_orders(host, headers)
-    print(orders)
+    readable_orders_print(orders, 'table')
 
 
 if __name__ == "__main__":
