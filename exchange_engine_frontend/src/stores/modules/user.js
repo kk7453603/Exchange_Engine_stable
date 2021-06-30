@@ -11,6 +11,9 @@ export default {
     },
     portfolio: state => {
       return state.portfolio
+    },
+    balance: s =>{
+      return s.profile.balance
     }
   },
   mutations: {

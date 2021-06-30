@@ -1,140 +1,149 @@
 <template>
-  <v-container
-    class="px-10"
-  >
-    <h1>
-      Портфель
-    </h1>
-    <v-list
-      v-if="portfolio.length"
-      two-line
-      color="white"
-    >
-      <v-subheader 
-        class="mr-8"
-        inset
-      >
-        <span>
-          Акции
-        </span>
-        <v-spacer/>
-        <!-- <span>
-          {{ sumSecurities(portfolio) }}
-        </span> -->
-      </v-subheader>
+  <v-row class="flex-column-reverse flex-md-row">
+    <v-col cols="12" md="8">
+      <v-list two-line class="transparent">
+        <v-list-item-group v-model="selectedItem" color="">
+          <v-subheader inset class="text-h6"> Акции </v-subheader>
+          <v-list-item v-for="(security) in portfolio" :key="security.stock.id"
+            @click="$router.push({ name: 'Stoks', params:{id:security.stock.id }})">
+            <v-list-item-avatar>
+              <v-icon class="grey lighten-1" dark> </v-icon>
+            </v-list-item-avatar>
 
-      <v-list-item
-        v-for="security in portfolio"
-        :key="security.title"
-      >
-        <v-list-item-avatar
-          color="grey lighten-3 text-center caption"
-        >
-          <v-img
-            v-if="security.icon"
-            :src="security.icon"
-          />
+            <v-list-item-content>
+              <v-list-item-title v-text="security.stock.name"></v-list-item-title>
 
-          <span 
-            v-else
-            class="text-center mx-auto"
-          >
-            {{ security.stock.name }}
-          </span>
-        </v-list-item-avatar>
+              <v-list-item-subtitle v-text="security.count + ' шт.'"></v-list-item-subtitle>
+            </v-list-item-content>
 
-        <div
-          v-if="profile.is_superuser"
-          class="mr-5"
-        >
-          <v-list-item-subtitle>
-            Владелец
-          </v-list-item-subtitle>
-          <v-list-item-title
-            class="d-inline"
-          >
-            {{ security.user }}
-          </v-list-item-title>
-        </div>
-
-        <v-list-item-content>
-          <v-list-item-title v-text="security.stock.name"/>
-          <v-list-item-subtitle v-if="security.count < 0">
-            (Торговля на понижение)
-          </v-list-item-subtitle>
-        </v-list-item-content>
-        <v-list-item-action
-          v-if="security.count < 0"
-        >
-          <v-list-item-title
-            class="font-weight-medium mb-n2"
-          >
-            {{ security.count }} x {{ (-security.count * security.stock.price).toFixed(2) }}&#x20AE;
-          </v-list-item-title>
-          <v-list-item-title
-            :class="(security.stock.price - security.aver_price < 0) ? 'green--text': (security.stock.price - security.aver_price > 0) ? 'red--text' : 'grey--text'"
-          >
-            {{ (security.count * (security.stock.price - security.aver_price)).toFixed(2) }}&#x20AE;
-            <span class="grey--text"> | </span>
-            {{ ((security.stock.price - security.aver_price) / security.stock.price * -100).toFixed(2) }}%
-          </v-list-item-title>
-        </v-list-item-action>
-        <v-list-item-action
-          v-else
-        >
-          <v-list-item-title
-            class="font-weight-medium mb-n2"
-          >
-            {{ security.count }} x {{ security.stock.price.toFixed(2) }}&#x20AE;
-          </v-list-item-title>
-          <v-list-item-title
-            :class="(security.stock.price - security.aver_price < 0) ? 'red--text': (security.stock.price - security.aver_price > 0) ? 'green--text' : 'grey--text'"
-          >
-            {{ (security.count * (security.stock.price - security.aver_price)).toFixed(2) }}&#x20AE;
-            <span class="grey--text"> | </span>
-            {{ ((security.stock.price - security.aver_price) / security.stock.price * 100).toFixed(2) }}%
-          </v-list-item-title>
-        </v-list-item-action>
-      </v-list-item>
-    </v-list>
-    <h3
-      v-else
-    >
-      Ваш портфель пока пуст
-    </h3>
-  </v-container>
+            <v-list-item-action>
+              <p class="text-overline ma-0">{{security.stock.price.toFixed(2)}}₮</p>
+              <p class="text-caption ma-0 green--text darken-1">
+                <v-icon x-small color="green">mdi-arrow-up</v-icon> {{(security.stock.price - security.aver_price).toFixed(2)}}₮ ({{ ((security.stock.price - security.aver_price) / security.stock.price * 100).toFixed(2) }}%)
+              </p>
+            </v-list-item-action>
+          </v-list-item>
+          <v-divider></v-divider>
+        </v-list-item-group>
+      </v-list>
+    </v-col>
+    <v-col cols="12" md="4">
+      <v-card outlined elevation="0" class="pa-2 mb-8 rounded-xl">
+        <v-card-title class="text-h6 ">Стоимость портвеля</v-card-title>
+        <v-card-text class="pt-2 pb-0">
+          <v-row class="justify-space-between align-center">
+            <v-col cols="auto">
+              <h1>{{summ_potfolio.toFixed(2)}}₮</h1>
+            </v-col>
+            <v-col>
+              <p class="text-right text-subtitle-1 ma-0 green--text darken-1" style="white-space: nowrap;">
+                <v-icon x-small color="green">mdi-arrow-up</v-icon> 1 084,12 ₮ (1,42 %)
+              </p>
+            </v-col>
+          </v-row>
+        </v-card-text>
+      </v-card>
+      <v-card outlined elevation="0" class="pa-2 mb-8 rounded-xl">
+        <v-card-title class="text-h6">Баланс</v-card-title>
+        <v-card-text class="pt-2 pb-0">
+          <v-row class="justify-space-between align-center">
+            <v-col cols="auto">
+              <h1>{{profile.balance.toFixed(2)}}₮</h1>
+            </v-col>
+            <v-col class="d-flex justify-space-around">
+              <div class="d-flex flex-column justify-center align-center">
+                <v-btn class="mx-2" fab dark small>
+                  <v-icon dark>
+                    mdi-plus
+                  </v-icon>
+                </v-btn>
+                <p class="caption mt-1">Пополнить</p>
+              </div>
+              <div class="d-flex flex-column justify-center align-center">
+                <v-btn class="mx-2" fab dark small>
+                  <v-icon dark>
+                    mdi-clipboard-text
+                  </v-icon>
+                </v-btn>
+                <p class="caption mt-1">Операции</p>
+              </div>
+            </v-col>
+          </v-row>
+        </v-card-text>
+      </v-card>
+    </v-col>
+  </v-row>
 </template>
 
 <script>
-export default {
-  name: 'Portfolio',
+  export default {
+    name: 'App',
 
-  data: () => ({
-    portfolioInterval: undefined
-  }),
-
-  computed: {
-    portfolio() {
-      console.log(this.$store.getters.portfolio)
-      return this.$store.getters.portfolio
-    },
-    profile() {
-      return this.$store.getters.profile
-    }
-  },
-
-  methods: {
-    sumSecurities(securities) {
-      let sum = 0
-
-      for (let key in securities) {
-        sum += securities[key].price
+    computed: {
+      portfolio() {
+        console.log(this.$store.getters.portfolio)
+        return this.$store.getters.portfolio
+      },
+      profile() {
+        return this.$store.getters.profile
+      },
+      summ_potfolio(){
+        let summa = 0
+        for(let item of this.$store.getters.portfolio){
+          summa+=item.stock.price
+        }
+        return summa
       }
+    },
 
-      return sum.toFixed(2)
-    }
-  },
-}
+    methods: {
+      sumSecurities(securities) {
+        let sum = 0
+
+        for (let key in securities) {
+          sum += securities[key].price
+        }
+
+        return sum.toFixed(2)
+      }
+    },
+
+    data: () => ({
+      portfolioInterval: undefined,
+      value: 'recent',
+      alignments: ['start', 'center', 'end'],
+      files: [{
+          color: 'blue',
+          icon: 'mdi-clipboard-text',
+          subtitle: 'Jan 20, 2014',
+          title: 'Vacation itinerary'
+        },
+        {
+          color: 'amber',
+          icon: 'mdi-gesture-tap-button',
+          subtitle: 'Jan 10, 2014',
+          title: 'Kitchen remodel'
+        }
+      ],
+      folders: [{
+          subtitle: 'Jan 9, 2014',
+          title: 'Photos'
+        },
+        {
+          subtitle: 'Jan 17, 2014',
+          title: 'Recipes'
+        },
+        {
+          subtitle: 'Jan 28, 2014',
+          title: 'Work'
+        }
+      ],
+    })
+  }
+
 </script>
-<style scoped>
+
+
+<style>
+
 </style>
