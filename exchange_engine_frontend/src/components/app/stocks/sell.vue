@@ -51,24 +51,24 @@
                     <v-col cols="12">
                         <v-select v-model="select" :items="items" label="Тип заявки" outlined></v-select>
                         <v-form v-if="select == 0">
-                            <v-text-field type="number" min='1' value="1" outlined label="Колическво">
+                            <v-text-field v-model="amount" type="number" min='1'  outlined label="Колическво">
                             </v-text-field>
                         </v-form>
                         <v-form v-if="select == 1">
-                            <v-text-field min='0' :value="stocks_portfolio.stock.price.toFixed(2)" append-icon="₮" outlined label="Цена">
+                            <v-text-field min='0' v-model="price" append-icon="₮" outlined label="Цена">
                             </v-text-field>
-                            <v-text-field type="number" min='1' value="1" outlined label="Колическво">
+                            <v-text-field v-model="amount" type="number" min='1' outlined label="Колическво">
                             </v-text-field>
                         </v-form>
                         <v-form v-if="select == 2">
-                            <v-text-field min='0' append-icon="₮" outlined label="Размер плеча">
+                            <v-text-field min='0' v-model="ratio"  append-icon="₮" outlined label="Размер плеча">
                             </v-text-field>
-                            <v-text-field type="number" min='1' value="1" outlined label="Колическво">
+                            <v-text-field v-model="amount" type="number" min='1' outlined label="Колическво">
                             </v-text-field>
                         </v-form>
                     </v-col>
                     <v-col>
-                        <v-btn block elevation="0" color="primary" text @click="dialog = false">
+                        <v-btn block elevation="0" color="primary" text @click="trade()">
                             Продать
                         </v-btn>
                     </v-col>
@@ -79,6 +79,10 @@
 </template>
 
 <script>
+    import {
+        getAPI
+    } from '@/axios-api'
+
     export default {
         props:['stocks_portfolio'],
         data: () => ({
@@ -96,8 +100,46 @@
                 text: 'Торговля с плечом',
                 value: 2,
             }],
-            select:0
-        })
+            select:0,
+            limit_order: false,
+            price: 0,
+            amount: 1,
+            ratio: 0,
+        }),
+        methods:{
+            trade() {
+                let url_trade = this.select == 2 ? 'trading/leverage/' : 'orders/add'
+                getAPI.post(url_trade, {
+                        stock: this.stocks_portfolio.stock.name.toString(),
+                        type: 1,
+                        amount: this.amount,
+                        ratio: this.ratio,
+                        price: this.limit_order ? this.price : 0,
+                    }, {
+                        headers: {
+                            Authorization: `Bearer ${this.$store.getters.accessToken}`
+                        }
+                    })
+                    .then(response => {
+                        console.log(response)
+                        this.$store.commit({
+                            type: 'showSnackbar',
+                            text: 'Вы создали заявку'
+                        })
+                        
+                    })
+                    .catch(err => {
+                        console.log(err)
+                        this.$store.commit({
+                            type: 'showSnackbar',
+                            text: 'Введите корректные данные для торговли'
+                        })
+                        
+                })
+                this.dialog = false
+                
+            },
+        }
     }
 </script>
 

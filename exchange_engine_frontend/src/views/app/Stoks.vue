@@ -97,9 +97,8 @@
             }
         },
         methods: {
-            getStocks() {
-                
-            getAPI.get('api/v1/stocks/' + this.$route.params.id, {
+            getStocks() {   
+                getAPI.get('api/v1/stocks/' + this.$route.params.id, {
                         headers: {
                             Authorization: `Bearer ${this.$store.getters.accessToken}`
                         }
@@ -115,7 +114,7 @@
             },
             getCandles() {
                 if(this.$route.params.id!=undefined){
-                    getAPI.get('http://127.0.0.1:8000/api/v1/candles/' + this.$route.params.id + '/' + (this
+                    getAPI.get('/api/v1/candles/' + this.$route.params.id + '/' + (this
                         .selectedCandlesType + 1))
                     .then(response => {
                         let data = response.data.map(function (candle) {

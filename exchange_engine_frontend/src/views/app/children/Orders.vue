@@ -4,115 +4,114 @@
       Заявки
     </h1>
     <v-col cols="12">
-      <v-tabs v-model="tab">
-        <v-tab>
-          Покупка
-        </v-tab>
-        <v-tab>
-          Продажа
-        </v-tab>
-      </v-tabs>
-    </v-col>
-    <v-col cols="12">
-          
-    <v-tabs-items v-model="tab">
-      <v-tab-item>
-        <v-list-item v-for="order in purchaseOrders" :key="order.id">
-        <v-list-item-avatar color="grey lighten-3 text-center caption">
-          <v-img v-if="order.icon" :src="order.icon" />
+      <v-card elevation="0">
+        <v-tabs v-model="tab">
+          <v-tab>
+            Покупка
+          </v-tab>
+          <v-tab>
+            Продажа
+          </v-tab>
+        </v-tabs>  
+        <v-tabs-items v-model="tab">
+          <v-tab-item>
+            <v-list-item tile v-for="order in purchaseOrders" :key="order.id">
+              <v-list-item-avatar color="grey lighten-3 text-center caption">
+                <v-img v-if="order.icon" :src="order.icon" />
 
-          <span v-else class="text-center mx-auto">
-            {{ order.stock.name }}
-          </span>
-        </v-list-item-avatar>
+                <span v-else class="text-center mx-auto">
+                  {{ order.stock.name }}
+                </span>
+              </v-list-item-avatar>
 
-        <div v-if="profile.is_superuser" class="mr-5">
-          <v-list-item-subtitle>
-            Владелец
-          </v-list-item-subtitle>
-          <v-list-item-title class="d-inline">
-            {{ order.user }}
-          </v-list-item-title>
-        </div>
+              <div v-if="profile.is_superuser" class="mr-5">
+                <v-list-item-subtitle>
+                  Владелец
+                </v-list-item-subtitle>
+                <v-list-item-title class="d-inline">
+                  {{ order.user }}
+                </v-list-item-title>
+              </div>
 
-        <v-list-item-content>
-          <v-list-item-title v-if="order.type">
-            Статус заявки на продажу {{ order.stock.name }}
-          </v-list-item-title>
-          <v-list-item-title v-else>
-            Статус заявки на покупку {{ order.stock.name }}
-          </v-list-item-title>
+              <v-list-item-content>
+                <v-list-item-title v-if="order.type">
+                  Статус заявки на продажу {{ order.stock.name }}
+                </v-list-item-title>
+                <v-list-item-title v-else>
+                  Статус заявки на покупку {{ order.stock.name }}
+                </v-list-item-title>
 
-          <v-list-item-subtitle v-if="order.is_closed" class="green--text">
-            Выполнена
-          </v-list-item-subtitle>
-          <v-list-item-subtitle v-else class="grey--text">
-            Открыта
-          </v-list-item-subtitle>
-        </v-list-item-content>
+                <v-list-item-subtitle v-if="order.is_closed" class="green--text">
+                  Выполнена
+                </v-list-item-subtitle>
+                <v-list-item-subtitle v-else class="grey--text">
+                  Открыта
+                </v-list-item-subtitle>
+              </v-list-item-content>
 
-        <v-list-item-action>
-          <v-list-item-title class="font-weight-medium">
-            {{ order.count }} X {{ order.price.toFixed(2) }}&#x20AE;
-          </v-list-item-title>
-          <v-list-item-subtitle>
-            {{ (order.count * order.price).toFixed(2) }}&#x20AE;
-          </v-list-item-subtitle>
-        </v-list-item-action>
-        </v-list-item>
-        <h5 v-if="!purchaseOrders.length" class="ml-15">
-          У вас пока нет заявок на продажу
-        </h5>
-      </v-tab-item>
-      <v-tabs-items>
-        <v-list-item v-for="order in saleOrders" :key="order.id">
-        <v-list-item-avatar color="text-center caption">
-          <v-img v-if="order.icon" :src="order.icon" />
+              <v-list-item-action>
+                <v-list-item-title class="font-weight-medium">
+                  {{ order.count }} X {{ order.price.toFixed(2) }}&#x20AE;
+                </v-list-item-title>
+                <v-list-item-subtitle>
+                  {{ (order.count * order.price).toFixed(2) }}&#x20AE;
+                </v-list-item-subtitle>
+              </v-list-item-action>
+            </v-list-item>
+            <h5 v-if="purchaseOrders.length == 0" class="text-center text-h5">
+              У вас пока нет заявок на покупку
+            </h5>
+          </v-tab-item>
+          <v-tab-item>
+            <v-list-item tile v-for="order in saleOrders" :key="order.id">
+              <v-list-item-avatar color="text-center caption">
+                <v-img v-if="order.icon" :src="order.icon" />
 
-          <span v-else class="text-center mx-auto">
-            {{ order.stock.name }}
-          </span>
-        </v-list-item-avatar>
+                <span v-else class="text-center mx-auto">
+                  {{ order.stock.name }}
+                </span>
+              </v-list-item-avatar>
 
-        <div v-if="profile.is_superuser" class="mr-5">
-          <v-list-item-subtitle>
-            Владелец
-          </v-list-item-subtitle>
-          <v-list-item-title class="d-inline">
-            {{ order.user }}
-          </v-list-item-title>
-        </div>
+              <div v-if="profile.is_superuser" class="mr-5">
+                <v-list-item-subtitle>
+                  Владелец
+                </v-list-item-subtitle>
+                <v-list-item-title class="d-inline">
+                  {{ order.user }}
+                </v-list-item-title>
+              </div>
 
-        <v-list-item-content>
-          <v-list-item-title v-if="order.type">
-            Статус заявки на продажу {{ order.stock.name }}
-          </v-list-item-title>
-          <v-list-item-title v-else>
-            Статус заявки на покупку {{ order.stock.name }}
-          </v-list-item-title>
+              <v-list-item-content>
+                <v-list-item-title v-if="order.type">
+                  Статус заявки на продажу {{ order.stock.name }}
+                </v-list-item-title>
+                <v-list-item-title v-else>
+                  Статус заявки на покупку {{ order.stock.name }}
+                </v-list-item-title>
 
-          <v-list-item-subtitle v-if="order.is_closed" class="green--text">
-            Выполнена
-          </v-list-item-subtitle>
-          <v-list-item-subtitle v-else class="grey--text">
-            Открыта
-          </v-list-item-subtitle>
-        </v-list-item-content>
+                <v-list-item-subtitle v-if="order.is_closed" class="green--text">
+                  Выполнена
+                </v-list-item-subtitle>
+                <v-list-item-subtitle v-else class="grey--text">
+                  Открыта
+                </v-list-item-subtitle>
+              </v-list-item-content>
 
-        <v-list-item-action>
-          <v-list-item-title class="font-weight-medium">
-            {{ order.count }} X {{ order.price.toFixed(2) }}&#x20AE;
-          </v-list-item-title>
-          <v-list-item-subtitle>
-            {{ (order.count * order.price).toFixed(2) }}&#x20AE;
-          </v-list-item-subtitle>
-        </v-list-item-action>
-        </v-list-item>
-        <h5 v-if="!saleOrders.length" class="ml-15">
-          У вас пока нет заявок на продажу
-        </h5>
-      </v-tabs-items>
-    </v-tabs-items>
+              <v-list-item-action>
+                <v-list-item-title class="font-weight-medium">
+                  {{ order.count }} X {{ order.price.toFixed(2) }}&#x20AE;
+                </v-list-item-title>
+                <v-list-item-subtitle>
+                  {{ (order.count * order.price).toFixed(2) }}&#x20AE;
+                </v-list-item-subtitle>
+              </v-list-item-action>
+            </v-list-item>
+            <h5 v-if="saleOrders.length == 0" class="text-center text-h5">
+              У вас пока нет заявок на продажу
+            </h5>
+          </v-tab-item>
+        </v-tabs-items>
+      </v-card>
     </v-col>
   </v-row>
 
@@ -129,7 +128,7 @@
     data: () => ({
       orders: [],
       ordersInterval: undefined,
-      tab:null,
+      tab: null,
     }),
 
     methods: {
