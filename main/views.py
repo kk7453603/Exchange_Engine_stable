@@ -56,17 +56,17 @@ class AddOrderView(APIView):
     """
     permission_classes = (IsAuthenticated,)
 
-    @staticmethod
-    def margin_call(user):
-        """
-        Margin call
-        """
-        if LeverageData.objects.filter(user=user):
-            user_data = LeverageData.objects.get(user=user)
-            if user.balance <= 0:
-                for object in Order.objects.filter(user=user, stock=user_data.stock):
-                    object.is_closed = True
-                    object.save()
+    # @staticmethod
+    # def margin_call(user):
+    #     """
+    #     Margin call
+    #     """
+    #     if LeverageData.objects.filter(user=user):
+    #         user_data = LeverageData.objects.get(user=user)
+    #         if user.balance <= 0:
+    #             for object in Order.objects.filter(user=user, stock=user_data.stock):
+    #                 object.is_closed = True
+    #                 object.save()
 
     @swagger_auto_schema(
         method='post',
@@ -108,6 +108,7 @@ class AddOrderView(APIView):
         type = data['type']
         price = float(data['price'])
         amount = int(data['amount'])
+        leverage = int(data['leverage'])
         is_limit = False
         if price == 0:
             price = stock.price
@@ -118,7 +119,7 @@ class AddOrderView(APIView):
             setting = Settings.objects.filter(stock_id=-1, name='short_switch').last()
         elif Settings.objects.filter(stock_id=stock.id, name='short_switch'):
             setting = Settings.objects.filter(stock_id=stock.id, name='short_switch').last()
-        if price <= 0 or amount <= 0:
+        if price <= 0 or amount <= 0 or leverage <= 0:
             return Response({"detail": "incorrect data"}, status=status.HTTP_400_BAD_REQUEST)
         self.margin_call(user)
 
@@ -130,23 +131,29 @@ class AddOrderView(APIView):
             (not setting.data['is_active'] and type == 1 and flag):
             portfolio, created = Portfolio.objects.get_or_create(user=user, stock=stock)
 
-            order = Order(user=user, stock=stock, type=type, price=price, is_closed=False, amount=amount, count=amount, is_limit=is_limit)
+            order = Order(user=user, stock=stock, type=type, price=price, is_closed=False, amount=amount, count=amount, is_limit=is_limit, leverage=leverage)
 
             if order.amount != 0:
                 if order.is_limit:
                     order.save()
                 if not order.is_limit:
+
                     if type == 0 and not portfolio.is_debt:
                         if user.balance >= order.amount * order.price:
+                            if order.leverage > 1:
+                                order.credit += order.amount * order.price * order.leverage - order.amount * order.price
                             portfolio.count += order.amount
                             user.balance -= order.amount * order.price
                         else:
                             # обработать ошибку не хватки денег
+                            print("!!!!!!!!!!!!!!!!!1")
                             return Response({"detail": "incorrect data"}, status=status.HTTP_400_BAD_REQUEST)
 
                     elif type == 1 and portfolio.count >= order.amount and not portfolio.is_debt:
+                        if order.leverage > 1:
+                            order.credit -= order.amount * order.price * order.leverage - order.amount * order.price
                         portfolio.count -= order.amount
-                        user.balance += order.amount * stock.price
+                        user.balance += order.amount * stock.price * order.leverage - order.credit
 
                     elif type == 1 and portfolio.count == 0 and not portfolio.is_debt:
                         if (setting is None or setting.data['is_active']) or not setting.data['is_active']:
@@ -155,7 +162,7 @@ class AddOrderView(APIView):
                                 portfolio.is_debt = True
                                 portfolio.count = -order.amount
                             else:
-                                # обработать ошибку: нельзя торговать шорт при переходе границы
+                                # обработать ошибку: нельзя торговать в шорт при переходе границы
                                 return Response({"detail": "incorrect data"}, status=status.HTTP_400_BAD_REQUEST)
                         else:
                             # торговать в шорт не возможно
@@ -168,14 +175,14 @@ class AddOrderView(APIView):
                                 portfolio.count = portfolio.count - order.amount
                                 portfolio.short_balance -= portfolio.count * stock.price
                             else:
-                                # обработать ошибку: нельзя торговать шорт при переходе границы
+                                # обработать ошибку: нельзя торговать в шорт при переходе границы
                                 return Response({"detail": "incorrect data"}, status=status.HTTP_400_BAD_REQUEST)
                         else:
                             # торговать в шорт невозможно
                             return Response({"detail": "incorrect data"}, status=status.HTTP_400_BAD_REQUEST)
 
                     elif type == 1 and portfolio.is_debt:
-                        if order.amount * order.price <= 100000 and order.amount * order.price - abs(portfolio.short_balance) <= 0:
+                        if order.amount * order.price - abs(portfolio.short_balance) <= 0 and order.amount * order.price <= 100000:
                             portfolio.short_balance += order.amount * order.price
                             portfolio.count -= order.amount
                         else:
@@ -183,21 +190,21 @@ class AddOrderView(APIView):
                             return Response({"detail": "incorrect data"}, status=status.HTTP_400_BAD_REQUEST)
 
                     elif type == 0 and portfolio.is_debt and portfolio.count < -order.amount:
-                        user.balance += (100000 - abs(portfolio.short_balance)) - order.amount * stock.price
+                        user.balance += (100000 - abs(portfolio.short_balance)) - stock.price * order.amount
                         portfolio.count += order.amount
 
                     elif type == 0 and portfolio.is_debt and portfolio.count == -order.amount:
-                        user.balance += (100000 - abs(portfolio.short_balance)) - order.amount * stock.price
+                        user.balance += (100000 - abs(portfolio.short_balance)) - stock.price * order.amount
                         portfolio.count = 0
-                        portfolio.is_debt = False
                         portfolio.short_balance = -100000
+                        portfolio.is_debt = False
 
                     elif type == 0 and portfolio.is_debt and portfolio.count > -order.amount:
-                        if (order.amount + portfolio.count) * order.price <= user.balance:
-                            user.balance += (100000 - abs(portfolio.short_balance)) - abs(portfolio.count) * stock.price
+                        if order.price * (order.amount + portfolio.count) <= user.balance:
+                            user.balance += (100000 - abs(portfolio.short_balance)) - stock.price * abs(portfolio.count)
                             portfolio.count += order.amount
-                            portfolio.is_debt = False
                             portfolio.short_balance = -100000
+                            portfolio.is_debt = False
                             user.balance -= portfolio.count * order.price
                         else:
                             # обработать ошибку нехватки денег
@@ -409,6 +416,7 @@ class ProfileDetailView(APIView):
                     type=openapi.TYPE_FILE,
                     description='Аватар пользователя'
                 ),
+
             }
         )
     )
@@ -529,95 +537,95 @@ class PortfolioUserView(APIView):
         return Response(serializer.data)
 
 
-class LeverageTradingView(APIView):
-    """
-    Торговля с плечом
-    """
-
-    def get(self, request):
-        """
-        Отображение формы для торговли с плечом при GET запросе
-
-        Просто форма для торговли с плечом. На вход подаётся только токен пользователя.
-        """
-        form = LeverageTradingForm(initial={
-            'type': 0,
-            'stock': 0,
-            'ratio': 2,
-        })
-        user = User.objects.get(id=request.user.pk)
-        context = {
-            'user': user,
-            'form': form,
-            'too_low': 0,
-        }
-        return render(request, 'trading/leverage.html', context)
-
-    @swagger_auto_schema(
-        method='post',
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                'stock': openapi.Schema(
-                    type=openapi.TYPE_STRING,
-                    description='акция, которую пользователь хочет купить/продать'
-                ),
-                'ratio': openapi.Schema(
-                    type=openapi.TYPE_NUMBER,
-                    description='размер плеча'
-                )
-            }
-        )
-    )
-    @action(detail=True, methods=['post'])
-    def post(self, request):
-        """
-        Торговля с плечом и обработка данных при POST запросе
-
-        Помимо остальных параметров, на вход принимается токен пользователя.
-        """
-        form = LeverageTradingForm(request.POST)
-        data = request.data
-        user = User.objects.get(id=request.user.pk)
-        ratio = int(data['ratio'])
-        stock = Stocks.objects.get(name=data['stock'])
-        quote = Quotes.objects.filter(stock=stock.id).last()
-        type = bool(data.get('type', False))
-        cash = user.balance * ratio
-        setting = 'None'
-        if Settings.objects.filter(stock_id=-1, name='leverage'):
-            setting = Settings.objects.filter(stock_id=-1, name='leverage').last()
-        elif Settings.objects.filter(stock_id=stock.pk, name='leverage'):
-            setting = Settings.objects.filter(stock_id=stock.pk, name='leverage').last()
-        if setting != 'None':
-            ratio_minimum = setting.data['min_leverage']
-            ratio_maximum = setting.data['max_leverage']
-            if ratio_minimum is not None:
-                if ratio < ratio_minimum:
-                    ratio = ratio_minimum
-            if ratio_maximum is not None:
-                if ratio > ratio_maximum:
-                    ratio = ratio_maximum
-        AddOrderView.margin_call(user)
-        if cash // quote.price >= 1:
-            amount = cash // quote.price
-            try:
-                broker = LeverageData.objects.get(user=user, stock=stock)
-                order = Order.objects.get(user=user, stock=stock, type=type, price=quote.price, is_closed=False)
-                order.amount = amount
-                broker.ratio = ratio
-            except LeverageData.DoesNotExist:
-                broker = LeverageData(user=user, stock=stock, ratio=ratio)
-                order = Order(user=user, stock=stock, type=type, price=quote.price, is_closed=False, amount=amount, count=amount)
-            order.save()
-            broker.save()
-            return HttpResponseRedirect("/api/v1/orders/")
-        else:
-            context = {
-                'too_low': 1,
-                'form': form,
-            }
-            return render(request, 'trading/leverage.html', context)
+# class LeverageTradingView(APIView):
+#     """
+#     Торговля с плечом
+#     """
+#
+#     def get(self, request):
+#         """
+#         Отображение формы для торговли с плечом при GET запросе
+#
+#         Просто форма для торговли с плечом. На вход подаётся только токен пользователя.
+#         """
+#         form = LeverageTradingForm(initial={
+#             'type': 0,
+#             'stock': 0,
+#             'ratio': 2,
+#         })
+#         user = User.objects.get(id=request.user.pk)
+#         context = {
+#             'user': user,
+#             'form': form,
+#             'too_low': 0,
+#         }
+#         return render(request, 'trading/leverage.html', context)
+#
+#     @swagger_auto_schema(
+#         method='post',
+#         request_body=openapi.Schema(
+#             type=openapi.TYPE_OBJECT,
+#             properties={
+#                 'stock': openapi.Schema(
+#                     type=openapi.TYPE_STRING,
+#                     description='акция, которую пользователь хочет купить/продать'
+#                 ),
+#                 'ratio': openapi.Schema(
+#                     type=openapi.TYPE_NUMBER,
+#                     description='размер плеча'
+#                 )
+#             }
+#         )
+#     )
+#     @action(detail=True, methods=['post'])
+#     def post(self, request):
+#         """
+#         Торговля с плечом и обработка данных при POST запросе
+#
+#         Помимо остальных параметров, на вход принимается токен пользователя.
+#         """
+#         form = LeverageTradingForm(request.POST)
+#         data = request.data
+#         user = User.objects.get(id=request.user.pk)
+#         ratio = int(data['ratio'])
+#         stock = Stocks.objects.get(name=data['stock'])
+#         quote = Quotes.objects.filter(stock=stock.id).last()
+#         type = bool(data.get('type', False))
+#         cash = user.balance * ratio
+#         setting = 'None'
+#         if Settings.objects.filter(stock_id=-1, name='leverage'):
+#             setting = Settings.objects.filter(stock_id=-1, name='leverage').last()
+#         elif Settings.objects.filter(stock_id=stock.pk, name='leverage'):
+#             setting = Settings.objects.filter(stock_id=stock.pk, name='leverage').last()
+#         if setting != 'None':
+#             ratio_minimum = setting.data['min_leverage']
+#             ratio_maximum = setting.data['max_leverage']
+#             if ratio_minimum is not None:
+#                 if ratio < ratio_minimum:
+#                     ratio = ratio_minimum
+#             if ratio_maximum is not None:
+#                 if ratio > ratio_maximum:
+#                     ratio = ratio_maximum
+#         AddOrderView.margin_call(user)
+#         if cash // quote.price >= 1:
+#             amount = cash // quote.price
+#             try:
+#                 broker = LeverageData.objects.get(user=user, stock=stock)
+#                 order = Order.objects.get(user=user, stock=stock, type=type, price=quote.price, is_closed=False)
+#                 order.amount = amount
+#                 broker.ratio = ratio
+#             except LeverageData.DoesNotExist:
+#                 broker = LeverageData(user=user, stock=stock, ratio=ratio)
+#                 order = Order(user=user, stock=stock, type=type, price=quote.price, is_closed=False, amount=amount, count=amount)
+#             order.save()
+#             broker.save()
+#             return HttpResponseRedirect("/api/v1/orders/")
+#         else:
+#             context = {
+#                 'too_low': 1,
+#                 'form': form,
+#             }
+#             return render(request, 'trading/leverage.html', context)
 
 
 class ProfileBalanceAdd(APIView):
