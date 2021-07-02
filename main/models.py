@@ -142,6 +142,8 @@ class Order(models.Model):
     is_closed = models.BooleanField(default=False)
     date_closed = models.DateTimeField(default=None, null=True)
     is_limit = models.BooleanField(default=False)
+    leverage = models.IntegerField(default=1)
+    credit = models.IntegerField(default=0)
 
     def __str__(self) -> str:
         return f"{self.user} -> {self.stock} ({'BUY' if self.type else 'SELL'}). Price: {self.price:.2f}, execution: {self.count} / {self.amount}"
