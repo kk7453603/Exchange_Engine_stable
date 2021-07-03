@@ -275,8 +275,7 @@
           })
       },
       trade(type){
-        var url_trade = this.leverage_trade && !this.leverage_trade ? 'trading/leverage/' : 'orders/add'
-        getAPI.post(url_trade, {
+        getAPI.post('orders/add', {
           stock: this.selectedStock.name.toString(),
           type: type,
           price: this.limit_order ? this.price : 0,
