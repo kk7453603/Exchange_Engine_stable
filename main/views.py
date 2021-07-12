@@ -1,10 +1,16 @@
+from datetime import datetime, timedelta
+
+import pytz
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponseRedirect, HttpRequest
 from django.shortcuts import render
 from django.utils import timezone
+from drf_yasg import openapi
+from drf_yasg.openapi import Parameter
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework.generics import ListAPIView
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, action
 from rest_framework import filters, status
 from main.forms import LeverageTradingForm, UserBalance
 from rest_framework.response import Response
@@ -15,7 +21,7 @@ from bs4 import BeautifulSoup
 from main.models import Stocks, Order, Portfolio, User, Quotes, LeverageData, Statistics, Candles, Settings, Cryptocurrencies
 from main import serializers
 
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from django.db.models import Q
 
 
@@ -31,7 +37,7 @@ def registration_view(request):
         data = {}
         if serializer.is_valid():
             account = serializer.save()
-            data['response'] = "succefully"
+            data['response'] = "successfully"
             data['email'] = account.email
             data['username'] = account.username
         else:
@@ -62,32 +68,37 @@ class AddOrderView(APIView):
                     object.is_closed = True
                     object.save()
 
-    @staticmethod
-    def set_percentage(user_portfolio):
-        """
-        Установка процента в портфолио
-        """
-        sum = 0
-        portfolios = Portfolio.objects.filter(stock_id=user_portfolio.stock_id)
-        for object in portfolios:
-            sum += object.count
-        if sum == 0:
-            per_stocks = 100
-        else:
-            per_stocks = (user_portfolio.count / sum) * 100
-        user_portfolio.percentage = per_stocks
-        user_portfolio.save()
-
+    @swagger_auto_schema(
+        method='post',
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'stock': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description='акция, которую пользователь хочет купить/продать'
+                ),
+                'type': openapi.Schema(
+                    type=openapi.TYPE_BOOLEAN,
+                    description='тип ордера (false - покупка, true - продажа)'
+                ),
+                'price': openapi.Schema(
+                    type=openapi.TYPE_NUMBER,
+                    description='цена акции, по которой пользователь хочет купить или продать акцию, '
+                                'при торговле по лимитной цене.'
+                ),
+                'amount': openapi.Schema(
+                    type=openapi.TYPE_BOOLEAN,
+                    description='количество акций, которое пользователь хочет купить или продать акцию'
+                ),
+            }
+        )
+    )
+    @action(detail=True, methods=['post'])
     def post(self, request):
         """
         Создание ордера и обработка данных при POST запросе
 
-        На вход подаются следующие параметры:
-        - токен пользователя.
-        - `stock` - акция, которую пользователь хочет купить/продать.
-        - `type` - тип ордера (false - покупка, true - продажа).
-        - `price` - цена акции, по которой пользователь хочет купить или продать акцию, при торговле по лимитной цене.
-        - `amount` - количество акций, которое пользователь хочет купить или продать акцию.
+        Помимо остального на вход подаётся токен пользователя.
         """
         data = request.data
         user = User.objects.get(id=request.user.pk)
@@ -96,16 +107,20 @@ class AddOrderView(APIView):
         type = data['type']
         price = float(data['price'])
         amount = int(data['amount'])
+        is_limit = False
         if price == 0:
             price = stock.price
+        else:
+            is_limit = True
         setting = None
         if Settings.objects.filter(stock_id=-1, name='short_switch'):
             setting = Settings.objects.filter(stock_id=-1, name='short_switch').last()
         elif Settings.objects.filter(stock_id=stock.id, name='short_switch'):
             setting = Settings.objects.filter(stock_id=stock.id, name='short_switch').last()
         if price <= 0 or amount <= 0:
-            return Response({"detail": "uncorrect data"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "incorrect data"}, status=status.HTTP_400_BAD_REQUEST)
         self.margin_call(user)
+
         flag = False
         if Portfolio.objects.filter(user=user, stock=stock).exists() and \
             Portfolio.objects.get(user=user, stock=stock).count > 0:
@@ -113,66 +128,92 @@ class AddOrderView(APIView):
         if (setting is None or setting.data['is_active']) or (not setting.data['is_active'] and type == 0) or \
             (not setting.data['is_active'] and type == 1 and flag):
             portfolio, created = Portfolio.objects.get_or_create(user=user, stock=stock)
-            self.set_percentage(portfolio)
-            order = Order(user=user, stock=stock, type=type, price=price, is_closed=False, amount=amount, count=amount)
-            order_ops = Order.objects.filter(stock=stock, type=not type, price=price, is_closed=False)
-            for order_op in order_ops:
-                if order.amount != 0:
-                    user_op = order_op.user
-                    portfolio_op = Portfolio.objects.get(user=user_op, stock=stock)
-                    min_count = min(order.amount, order_op.amount) if type == 0 else -min(order.amount, order_op.amount)
-                    if portfolio_op.count - min_count >= 0 and user.balance - min_count * price >= 0:
 
-                        order.amount -= abs(min_count)
-                        order_op.amount -= abs(min_count)
+            order = Order(user=user, stock=stock, type=type, price=price, is_closed=False, amount=amount, count=amount, is_limit=is_limit)
 
-                        portfolio.count += min_count
-                        portfolio_op.count -= min_count
+            if order.amount != 0:
+                if order.is_limit:
+                    order.save()
+                if not order.is_limit:
+                    if type == 0 and not portfolio.is_debt:
+                        if user.balance >= order.amount * order.price:
+                            portfolio.count += order.amount
+                            user.balance -= order.amount * order.price
+                        else:
+                            # обработать ошибку не хватки денег
+                            return Response({"detail": "incorrect data"}, status=status.HTTP_400_BAD_REQUEST)
 
-                        portfolio.aver_price = (portfolio.aver_price * (portfolio.count - min_count)
-                                                    + abs(min_count) * price) / max(abs(portfolio.count), 1) * bool(portfolio.count)
+                    elif type == 1 and portfolio.count >= order.amount and not portfolio.is_debt:
+                        portfolio.count -= order.amount
+                        user.balance += order.amount * stock.price
 
-                        user_op.balance += min_count * price
-                        user.balance -= min_count * price
-                    if (setting is None or setting.data['is_active']) or not setting.data['is_active'] and (
-                        type == '0' or portfolio.count > 0):
-                        if portfolio.count < 0:
-                            portfolio.short_balance -= min_count * price
-                            user.balance += min_count * price
-                            portfolio.is_debt = True
+                    elif type == 1 and portfolio.count == 0 and not portfolio.is_debt:
+                        if (setting is None or setting.data['is_active']) or not setting.data['is_active']:
+                            if order.amount * order.price <= 100000 and portfolio.short_balance <= 0:
+                                portfolio.short_balance += order.amount * order.price
+                                portfolio.is_debt = True
+                                portfolio.count = -order.amount
+                            else:
+                                # обработать ошибку: нельзя торговать шорт при переходе границы
+                                return Response({"detail": "incorrect data"}, status=status.HTTP_400_BAD_REQUEST)
+                        else:
+                            # торговать в шорт не возможно
+                            return Response({"detail": "incorrect data"}, status=status.HTTP_400_BAD_REQUEST)
+                    elif type == 1 and portfolio.count < order.amount and portfolio.count != 0 and not portfolio.is_debt:
+                        if setting.data['is_active']:
+                            if (order.amount - portfolio.count) * order.price <= 100000 and order.amount * order.price - abs(portfolio.short_balance) <= 0:
+                                user.balance += portfolio.count * stock.price  # цена на данный момент
+                                portfolio.is_debt = True
+                                portfolio.count = portfolio.count - order.amount
+                                portfolio.short_balance -= portfolio.count * stock.price
+                            else:
+                                # обработать ошибку: нельзя торговать шорт при переходе границы
+                                return Response({"detail": "incorrect data"}, status=status.HTTP_400_BAD_REQUEST)
+                        else:
+                            # торговать в шорт невозможно
+                            return Response({"detail": "incorrect data"}, status=status.HTTP_400_BAD_REQUEST)
 
-                        if portfolio_op.count < 0:
-                            portfolio_op.short_balance += min_count * price
-                            user_op.balance -= min_count * price
-                            portfolio_op.is_debt = True
+                    elif type == 1 and portfolio.is_debt:
+                        if order.amount * order.price <= 100000 and order.amount * order.price - abs(portfolio.short_balance) <= 0:
+                            portfolio.short_balance += order.amount * order.price
+                            portfolio.count -= order.amount
+                        else:
+                            # обработать ошибку нельзя торговать шорт при захождении заграницу
+                            return Response({"detail": "incorrect data"}, status=status.HTTP_400_BAD_REQUEST)
 
-                        if portfolio.count == 0 and portfolio.is_debt:
-                            user.balance += 100000 + portfolio.short_balance
-                            portfolio.short_balance = -100000
+                    elif type == 0 and portfolio.is_debt and portfolio.count < -order.amount:
+                        user.balance += (100000 - abs(portfolio.short_balance)) - order.amount * stock.price
+                        portfolio.count += order.amount
+
+                    elif type == 0 and portfolio.is_debt and portfolio.count == -order.amount:
+                        user.balance += (100000 - abs(portfolio.short_balance)) - order.amount * stock.price
+                        portfolio.count = 0
+                        portfolio.is_debt = False
+                        portfolio.short_balance = -100000
+
+                    elif type == 0 and portfolio.is_debt and portfolio.count > -order.amount:
+                        if (order.amount + portfolio.count) * order.price <= user.balance:
+                            user.balance += (100000 - abs(portfolio.short_balance)) - abs(portfolio.count) * stock.price
+                            portfolio.count += order.amount
                             portfolio.is_debt = False
+                            portfolio.short_balance = -100000
+                            user.balance -= portfolio.count * order.price
+                        else:
+                            # обработать ошибку нехватки денег
+                            return Response({"detail": "incorrect data"}, status=status.HTTP_400_BAD_REQUEST)
 
-                        if portfolio_op.count == 0 and portfolio_op.is_debt:
-                            user.balance += 100000 + portfolio.short_balance
-                            portfolio_op.short_balance = -100000
-                            portfolio_op.is_debt = False
-
-                    if order_op.amount == 0:
-                        order_op.is_closed = True
-                        order_op.date_closed = timezone.now()
-                    self.margin_call(user)
-                    self.margin_call(user_op)
-                    self.set_percentage(portfolio)
-                    self.set_percentage(portfolio_op)
-                    user_op.save()
-                    order_op.save()
-                    portfolio_op.save()
-                if order.amount == 0:
                     order.is_closed = True
                     order.date_closed = timezone.now()
-            if type == 0 and user.balance >= amount * price or type == 1:
-                order.save()
-                user.save()
+                    user.save()
+                    order.save()
+                    portfolio.save()
+
+                self.margin_call(user)
+                sred = portfolio.count
+                portfolio.aver_price = ((portfolio.aver_price * (sred - order.amount)
+                                        + abs(order.amount) * order.price) / max(abs(sred), 1) * bool(sred))
                 portfolio.save()
+
         return Response("/api/v1/orders/")
 
 
@@ -192,7 +233,18 @@ class StockDetailView(APIView):
     """
     Информация об акции
     """
-
+    @swagger_auto_schema(
+        method='get',
+        manual_parameters=[
+            Parameter(
+                name='id',
+                in_='path',
+                type=openapi.TYPE_INTEGER,
+                description='id акции, берётся из списка акций'
+            ),
+        ]
+    )
+    @action(detail=True, methods=['get'])
     def get(self, request, pk):
         """
         Отображение данных о конкретной акции при GET запросе
@@ -211,7 +263,7 @@ class SettingsView(APIView):
         Отображение текущих настроек при GET запросе.
 
         Просто отображение настроек. Изменять настройки могут только администраторы.
-        На вход принимается только токен пользователя.
+        На вход ничего не принимается.
         """
         serializer = serializers.SettingsSerializer(Settings.objects.all(), many=True)
         return Response(serializer.data)
@@ -282,6 +334,33 @@ class StatisticsView(APIView):
         return Response(serializer.data)
 
 
+class ProfileAnotherView(APIView):
+    """
+    Отображение статистики юзера.
+
+    Работает только для админа
+    """
+
+    permission_classes = (IsAdminUser,)
+
+    @swagger_auto_schema(
+        method='get',
+        manual_parameters=[
+            Parameter(
+                name='id',
+                in_='path',
+                type=openapi.TYPE_INTEGER,
+                description='ID юзера'
+            ),
+        ]
+    )
+    @action(detail=True, methods=['get'])
+    def get(self, request, pk):
+        user = User.objects.get(id=pk)
+        serializer = serializers.ProfileDetailSerializer(user)
+        return Response(serializer.data)
+
+
 class ProfileDetailView(APIView):
     """
     Информация о пользователе
@@ -296,17 +375,48 @@ class ProfileDetailView(APIView):
         Отображение профиля пользователя при GET запросе
 
         Просто отображение профиля. Данные доступны только зарегистрированным пользователям.
-
-        На вход принимается только токен пользователя.
         """
         user = request.user
         return Response(serializers.ProfileDetailSerializer(user).data)
 
+    @swagger_auto_schema(
+        method='patch',
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'email': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description='Email-адрес пользователя'
+                ),
+                'first_name': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description='Имя пользователя'
+                ),
+                'last_name': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description='Фамилия пользователя'
+                ),
+                'password': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description='Пароль пользователя'
+                ),
+                'password2': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description='Пароль пользователя (подтверждение)',
+                ),
+                'file': openapi.Schema(
+                    type=openapi.TYPE_FILE,
+                    description='Аватар пользователя'
+                ),
+            }
+        )
+    )
+    @action(detail=True, methods=['patch'])
     def patch(self, request):
         """
         Редактирование профиля
 
-        Изменение имени, фамилии, электронной почты и пароля пользователя. На вход принимается 1 параметр: токен пользователя.
+        Изменение имени, фамилии, электронной почты и пароля пользователя
         """
         user = request.user
         data = request.data
@@ -332,16 +442,46 @@ class CandlesView(APIView):
     """
     Свечи
     """
+
+    @swagger_auto_schema(
+        method='get',
+        manual_parameters=[
+            Parameter(
+                name='id',
+                in_='path',
+                type=openapi.TYPE_INTEGER,
+                description='id акции'
+            ),
+            Parameter(
+                name='c_type',
+                in_='path',
+                type=openapi.TYPE_INTEGER,
+                description='Таймфрейм, в котором работает свеча (1 - минута, 2 - 5 минут, 3 - 15 минут, 4 - 30 минут, 5 - час)'
+            )
+        ]
+    )
+    @action(detail=True, methods=['get'])
     def get(self, request, pk, c_type):
         """
-        Отображение списка свечей данной акции при GET запросе
+        Отображение списка свечей данной акции и данного типа при GET запросе
 
         Свечи генерируются с помощью специального бота.
         """
+        candles = []
+        refresh_minutes = None
+        if Settings.objects.filter(stock_id=-1, name='chart_settings'):
+            setting = Settings.objects.filter(stock_id=-1, name='chart_settings').last()
+            refresh_minutes = setting.data['view_time']
+        elif Settings.objects.filter(stock_id=pk, name='chart_settings'):
+            setting = Settings.objects.filter(stock_id=pk, name='chart_settings').last()
+            refresh_minutes = setting.data['view_time']
+        if refresh_minutes is None:
+            refresh_minutes = 240
+        time_shift = datetime.now(pytz.timezone('Europe/Moscow')) - timedelta(minutes=refresh_minutes)
         if c_type > 0:
-            candles = Candles.objects.filter(stock_id=pk, type=c_type)
+            candles = Candles.objects.filter(date__gte=time_shift, stock_id=pk, type=c_type)
         elif c_type == 0:
-            candles = Candles.objects.filter(stock_id=pk)
+            candles = Candles.objects.filter(date__gte=time_shift, stock_id=pk)
         serializer = serializers.CandlesSerializer(candles, many=True)
         return Response(serializer.data)
 
@@ -359,7 +499,10 @@ class OrdersView(APIView):
         На вход подаётся только токен пользователя.
         """
         user = request.user
-        orders = Order.objects.filter(user_id=user)
+        if user.is_staff:
+            orders = Order.objects.filter(~Q(user_id=User.objects.get(username='admin')))
+        else:
+            orders = Order.objects.filter(user_id=user)
         serializer = serializers.OrdersSerializer(orders, many=True)
         return Response(serializer.data)
 
@@ -368,6 +511,7 @@ class PortfolioUserView(APIView):
     """
     Портфолио пользователя
     """
+    permission_classes = (IsAuthenticated,)
 
     def get(self, request):
         """
@@ -375,7 +519,11 @@ class PortfolioUserView(APIView):
 
         На вход подаётся только токен пользователя.
         """
-        portfolio = Portfolio.objects.filter(~Q(count=0), user_id=request.user.id,)
+        user = request.user
+        if user.is_staff:
+            portfolio = Portfolio.objects.filter(~Q(count=0), ~Q(user_id=User.objects.get(username='admin')))
+        else:
+            portfolio = Portfolio.objects.filter(~Q(count=0), user_id=request.user.id)
         serializer = serializers.PortfolioUserSerializer(portfolio, many=True)
         return Response(serializer.data)
 
@@ -404,14 +552,28 @@ class LeverageTradingView(APIView):
         }
         return render(request, 'trading/leverage.html', context)
 
+    @swagger_auto_schema(
+        method='post',
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'stock': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description='акция, которую пользователь хочет купить/продать'
+                ),
+                'ratio': openapi.Schema(
+                    type=openapi.TYPE_NUMBER,
+                    description='размер плеча'
+                )
+            }
+        )
+    )
+    @action(detail=True, methods=['post'])
     def post(self, request):
         """
         Торговля с плечом и обработка данных при POST запросе
 
-        На вход принимается 3 параметра:
-        - токен пользователя.
-        - `stock` - акция, которой торгует пользователь.
-        - `ratio` - размер плеча.
+        Помимо остальных параметров, на вход принимается токен пользователя.
         """
         form = LeverageTradingForm(request.POST)
         data = request.data
@@ -510,4 +672,18 @@ class PricesView(APIView):
         """
         prices = Quotes.objects.all()
         serializer = serializers.PriceSerializer(prices, many=True)
+        return Response(serializer.data)
+
+
+class StatisticsBalanceView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        """
+        Таблица результатов по балансу
+
+        На вход принимается только токен пользователя. На данной странице вы можете видеть топ людей по балансу.
+        """
+        users = User.objects.filter(is_staff=False).order_by('-balance')
+        serializer = serializers.StatisticsBalanceSerializer(users, many=True)
         return Response(serializer.data)

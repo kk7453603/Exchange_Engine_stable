@@ -92,7 +92,7 @@ class PortfolioTest(APITestCase):
         self.response = self.client.get(reverse('portfolio'))
 
     def test_error(self) -> None:
-        self.assertEqual(self.response.status_code, 200)
+        self.assertEqual(self.response.status_code, 401)
 
 
 class StocksListTest(APITestCase):
@@ -192,7 +192,7 @@ class OrderTest(APITestCase):
             'amount': 4,
             'type': True,
         })
-        self.assertEqual(len(Order.objects.all()), 0)
+        self.assertEqual(len(Order.objects.all()), 1)
 
     def test_portfolio_creation(self) -> None:
         url = reverse('add_order')
@@ -205,18 +205,6 @@ class OrderTest(APITestCase):
             'type': True,
         })
         self.assertEqual(len(Portfolio.objects.all()), 1)
-
-    def test_portfolio_percentage(self) -> None:
-        url = reverse('add_order')
-        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.token)
-        resp = self.client.post(url, data={
-            'format': 'json',
-            'stock': 'TWTR',
-            'price': 2,
-            'amount': 4,
-            'type': True,
-        })
-        self.assertEqual(Portfolio.objects.get(pk=1).percentage, 100)
 
     def test_portfolio_count(self) -> None:
         url = reverse('add_order')
@@ -263,7 +251,7 @@ class OrderTest(APITestCase):
             'amount': 4,
             'type': True,
         })
-        self.assertEqual(len(Order.objects.all()), 0)
+        self.assertEqual(len(Order.objects.all()), 2)
 
     def test_order_user_id(self) -> None:
         self.client = APIClient()
@@ -298,7 +286,7 @@ class OrderTest(APITestCase):
             'amount': 4,
             'type': True,
         })
-        self.assertEqual(len(Order.objects.all()), 0)
+        self.assertEqual(len(Order.objects.all()), 2)
 
     def test_balance_changes(self) -> None:
         self.client = APIClient()
